@@ -422,7 +422,10 @@ void rtlsdr_init_baseband(rtlsdr_dev_t * dev)
         rtlsdr_demod_write_reg(dev, 1, 0x1c + i, fir_coeff[i], 1);
 
     /* enable SDR mode, disable DAGC (bit 5) */
-    rtlsdr_demod_write_reg(dev, 0, 0x19, 0x05, 1);
+//     rtlsdr_demod_write_reg(dev, 0, 0x19, 0x05, 1);
+//    changed as per Changing from 0x25 to 0xd5 here switches the AGC off SM5BSZ July2 2012 
+//    didn't see any change AEER 13 Nov 13
+    rtlsdr_demod_write_reg(dev, 0, 0x19, 0xd5, 1);
 
     /* init FSM state-holding register */
     rtlsdr_demod_write_reg(dev, 1, 0x93, 0xf0, 1);
@@ -430,6 +433,20 @@ void rtlsdr_init_baseband(rtlsdr_dev_t * dev)
 
     /* disable AGC (en_dagc, bit 0) (this seems to have no effect) */
     rtlsdr_demod_write_reg(dev, 1, 0x11, 0x00, 1);
+
+// test made no difference
+    /* disable RF and IF AGC */
+// uint16_t tmp;
+// tmp = rtlsdr_demod_read_reg(dev, 1, 0x04, 1);
+// tmp &= ~0xc0;
+// rtlsdr_demod_write_reg(dev, 1, 0x04, tmp, 1);
+
+    /* disable AGC PGA */
+// rtlsdr_demod_write_reg(dev, 1, 0xd7, 0x00, 1);
+
+    /* disable GI PGA */
+// rtlsdr_demod_write_reg(dev, 1, 0xe5, 0x00, 1);
+// end of test
 
     /* disable RF and IF AGC loop */
     rtlsdr_demod_write_reg(dev, 1, 0x04, 0x00, 1);

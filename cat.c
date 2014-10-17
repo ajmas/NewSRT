@@ -56,6 +56,10 @@ int catfile(void)
                 sscanf(buf, "%*s %d", &d1.plotsec);
             if (kmatch(buf, "NBSW "))
                 sscanf(buf, "%*s %d", &d1.nbsw);
+            if (kmatch(buf, "NBLOCK "))
+                sscanf(buf, "%*s %d", &d1.nblk);
+            if (kmatch(buf, "NUMPOLY "))
+                sscanf(buf, "%*s %d", &d1.npoly);
             if (kmatch(buf, "BEAMWIDTH "))
                 sscanf(buf, "%*s %lf", &d1.beamw);
             if (kmatch(buf, "TOLERANCE "))
@@ -94,6 +98,8 @@ int catfile(void)
                 sscanf(buf, "%*s %lf", &d1.tsys);
             if (kmatch(buf, "FREQUENCY "))
                 sscanf(buf, "%*s %lf", &d1.freq);
+            if (kmatch(buf, "RESTFREQ "))
+                sscanf(buf, "%*s %lf", &d1.restfreq);
             if (kmatch(buf, "FREQCORR ")) // frequency correction for dongle in MHz
                 sscanf(buf, "%*s %lf", &d1.freqcorr);
             if (kmatch(buf, "BANDWIDTH ")) {

@@ -42,9 +42,10 @@ void cfft(int, float *, double *, int *);
 void DoOpenDevices();
 int get_pci(unsigned short value[], int count);
 
-void Init_Device()
+void Init_Device(int mode)
 {
     DoOpenDevices();
+    mode = 0;
 }
 
 void vspectra(void)

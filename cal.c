@@ -47,8 +47,13 @@ void cal(int mode)
                 maxf = k * d1.bw / d1.nfreq + d1.efflofreq;
             }
         }
-        polyfitr(NPOLY, d1.nfreq, bbspec, wtt, bspec);
-//                  for(k=0;k < d1.nfreq; k++) bspec[k] = bbspec[k];
+        if (d1.npoly > NPOLY)
+            d1.npoly = NPOLY;
+        polyfitr(d1.npoly, d1.nfreq, bbspec, wtt, bspec);
+//      for(k=0;k<d1.nfreq;k+=10) printf("k %d wtt %f bbspec %f\n",k,wtt[k],bbspec[k]);
+        if (d1.npoly == 1)
+            for (k = 0; k < d1.nfreq; k++)
+                bspec[k] = bbspec[k];
         p = a = 0;
         for (k = 0; k < d1.nfreq; k++) {
             if (wtt[k]) {
@@ -61,10 +66,10 @@ void cal(int mode)
             bspec[k] = bspec[k] / av;
         d1.calpwr = p / (a * d1.integ3);
         if (d1.yfac > 1.5 && d1.calmode == 20)
-            d1.tsys = 290.0 / (d1.yfac - 1.0); // put in Tsys
+            d1.tsys = (d1.tcal - d1.yfac * 3.0) / (d1.yfac - 1.0); // put in Tsys  assumes CMB of 3 K
         if (d1.calmode == 0)
             printf("yfac %f Tsys %f\n", d1.yfac, 290.0 / (d1.yfac - 1.0));
-        if (d1.caldone == 0 && d1.calmode != 2)
+        if (d1.caldone == 0 && d1.calmode != 2 && d1.calmode != 3)
             printf("yfac %f tsys %f pwr %f pwrprev %f calmode %d max_pwr %8.3f MHz\n", d1.yfac, d1.tsys, pwr,
                    pwrprev, d1.calmode, maxf);
         d1.yfac = 0;            // for next cal
@@ -106,7 +111,7 @@ void polyfitr(int npoly, int nfreq, float ddata[], float wtt[], float dataout[])
     static float mcalc[NSPEC * NPOLY];
     for (i = 0; i < nfreq; i++) {
         kk = i * npoly;
-        freq = (double) (i - d1.f1 * d1.nfreq) / ((double) (d1.fc * nfreq));
+        freq = (double) (i - d1.fc * d1.nfreq) / ((double) (d1.fc * nfreq));
         for (j = 0; j < npoly; j++) {
             mcalc[kk] = pow(freq, (double) j);
             kk++;
@@ -142,7 +147,7 @@ void polyfitr(int npoly, int nfreq, float ddata[], float wtt[], float dataout[])
 //        for (j = 0; j < npoly; j++) printf("poly %d %f\n",j,(double)bbrr[j]);
     for (i = 0; i < nfreq; i++) {
         re = 0.0;
-        freq = (double) (i - d1.f1 * d1.nfreq) / ((double) (d1.fc * nfreq));
+        freq = (double) (i - d1.fc * d1.nfreq) / ((double) (d1.fc * nfreq));
         for (j = 0; j < npoly; j++) {
             re += bbrr[j] * pow(freq, (double) j);
         }

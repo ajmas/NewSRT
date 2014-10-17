@@ -137,10 +137,14 @@ double readclock(void)
     t = gmtime(&now);
 // gmtime Jan 1 is day 0
     secs = tosecs(t->tm_year + 1900, t->tm_yday + 1, t->tm_hour, t->tm_min, t->tm_sec);
-    if (d1.start_time == 0.0)
-        d1.start_time = secs;
-    if (d1.speed_up)
-        secs = d1.start_time + (secs - d1.start_time) * d1.speed_up;
+    if (d1.azelsim) {
+        if (d1.start_time == 0.0)
+            d1.start_time = secs;
+        if (d1.speed_up > 0)
+            secs = d1.start_time + (secs - d1.start_time) * d1.speed_up;
+        else
+            secs += -d1.speed_up * 3600.0; // advance by hours
+    }
     sprintf(d1.timsource, "PC ");
     return (secs);
 }

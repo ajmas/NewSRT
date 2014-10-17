@@ -81,6 +81,7 @@ void hit_enter_freq(void)
     int n;
     freq = 1420;
     bw = d1.bw;
+    n = d1.nfreq;
     if (!d1.entry3)
         return;
     str = gtk_entry_get_text(GTK_ENTRY(entry3));
@@ -305,6 +306,10 @@ void button_cal_clicked(void)
         return;
     if (d1.calmode == 1) {
         d1.calpwr = 0;
+        return;
+    }
+    if (d1.calmode == 3) {
+        d1.docal = 1;
         return;
     }
     entry8 = gtk_entry_new();

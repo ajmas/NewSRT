@@ -1,4 +1,4 @@
-newsrtsource_ver2 tar ball includes c-code for the "new" SRT
+newsrtsource_ver3 tar ball includes c-code for the "new" SRT
 using:
        1] DAS-4020 PCI bus ADC card and in this case
 you need to install the driver PCI-DAS4020-12.1.21.tgz
@@ -15,7 +15,13 @@ uses c code mostly from RTLSDR
 The software is compiled using gcc by the bash script srtnmake
 Uncomment the gcc line which matches your available hardware
 Note that the libraries specified on this line need to be installed
-for the compilation to complete without errors
+for the compilation to complete without errors. 
+
+This version has corrected a few problems like some overwitting of the display.
+Improvements have been made in the bandpass calibration wen using the TV dongle.
+The simplest version (last option in srtnmake script) which uses the TV dongle and
+a software FFT is recommended. Given the narrow bandwidth of the dongle compared with
+the PCI-DAS4020 the software FFT speed on most new PCs is quite satisfactory.  
 
 
 Added notes:
@@ -56,5 +62,5 @@ This new release does not support the old Cassicorp antenna controller but I hav
 the old code (sportold.c) which might be useful for anyone who wants to write code
 for this old controller.
  
-  aeer 15 August 2013
+  aeer 26 Nov 2013
 

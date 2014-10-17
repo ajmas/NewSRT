@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
         if (strstr(buf, "-m") && strlen(buf) == 2)
             sscanf(argv[i + 1], "%d", &mode);
     }
-    d1.azelport = 0x3f8;        // com1 default
+//    d1.azelport = 0x3f8;        // com1 default for old SRT 
     d1.secs = readclock();
     d1.run = 1;
     d1.record = 0;
@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
     d1.freq = 1420.4;           // default
     d1.bw = 0;                  // set to 2.4 for TV dongle 10 MHz for ADC card in init
     d1.fbw = 0;                 // set in init or srt.cat
+    d1.nblk = 5;                // number of blocks in vspectra
     d1.record_int_sec = 0;
     d1.freqcorr = 0;            // frequency correction for L.O. may be needed for TV dongle
     d1.freqchng = 0;
@@ -98,16 +99,17 @@ int main(int argc, char *argv[])
     d1.plotsec = 1;
     d1.displ = 1;
     d1.noisecal = 0;
-    d1.ptoler = 1;
-    d1.countperstep = 10000;    // default large number for no stepping 
-    d1.elcounts_per_deg = (52.0 * 27.0 / 120.0); // default for H-180
-    d1.azcounts_per_deg = 8.0 * 32.0 * 60.0 / (360.0 * 9.0); // default for CASSIMOUNT
-    d1.rod = 1;                 // default to rod as on CASSIMOUNT
-    d1.rod1 = 14.25;            // rigid arm length
-    d1.rod2 = 16.5;             // distance from pushrod upper joint to el axis
-    d1.rod3 = 2.0;              // pushrod collar offset
-    d1.rod4 = 110.0;            // angle at horizon
-    d1.rod5 = 30.0;             // pushrod counts per inch
+//    used for old SRT mount and controller
+//    d1.ptoler = 1;
+//    d1.countperstep = 10000;    // default large number for no stepping 
+//    d1.elcounts_per_deg = (52.0 * 27.0 / 120.0); // default for H-180
+//    d1.azcounts_per_deg = 8.0 * 32.0 * 60.0 / (360.0 * 9.0); // default for CASSIMOUNT
+//    d1.rod = 1;                 // default to rod as on CASSIMOUNT
+//    d1.rod1 = 14.25;            // rigid arm length
+//    d1.rod2 = 16.5;             // distance from pushrod upper joint to el axis
+//    d1.rod3 = 2.0;              // pushrod collar offset
+//    d1.rod4 = 110.0;            // angle at horizon
+//    d1.rod5 = 30.0;             // pushrod counts per inch
     d1.azelsim = d1.radiosim = d1.fftsim = 0;
     d1.mainten = 0;
     d1.calcons = 1.0;
@@ -145,6 +147,8 @@ int main(int argc, char *argv[])
     d1.cmdfl = 0;
     d1.south = 1;
     d1.hgt = 0;
+    d1.dongle = 0;              // set to zero initially - set to 1 in Init_Device if dongle
+    d1.npoly = 25;              // number of terms in polynomial fit of bandpass
     pwrst = pwrprev = 0.0;
     soutrack[0] = 0;
     sprintf(d1.cmdfnam, "cmd.txt");
@@ -155,13 +159,17 @@ int main(int argc, char *argv[])
     d1.foutstatus = 0;
 // to get permission su root chown root srtn then chmod u+s srtn then exit 
     if (!d1.azelsim) {
-        printf("initializing antenna controller\n");
+        if (d1.printout)
+            printf("initializing antenna controller\n");
         i = rot2(&d1.aznow, &d1.elnow, -1, buf); // initialize
         i = rot2(&d1.aznow, &d1.elnow, 1, buf); // read
         if (i < 0) {
             printf("Couldn't talk to antenna controller\n");
             return 0;
         }
+    } else {
+        d1.azprev = d1.azlim1;
+        d1.elprev = d1.ellim1;
     }
     setgid(getgid());
     setuid(getuid());
@@ -179,7 +187,7 @@ int main(int argc, char *argv[])
     }
 
     if (!d1.radiosim)
-        Init_Device();          // for dongle
+        Init_Device(0);
 
     if (d1.displ) {
         gtk_init(&argc, &argv);
@@ -244,12 +252,12 @@ int main(int argc, char *argv[])
         // test setting up tooltips instead of the "enter"/"leave" used below
         tooltips = gtk_tooltips_new();
         gtk_tooltips_set_tip(tooltips, button_clear,
-                             "click to clear integration and reset time plot to mid-scale", NULL);
+                             "click to clear integration and reset time plot to 1/4-scale", NULL);
         gtk_tooltips_set_tip(tooltips, button_stow, "click to stow antenna", NULL);
         gtk_tooltips_set_tip(tooltips, button_azel, "click to enter az el coordinates", NULL);
         gtk_tooltips_set_tip(tooltips, button_npoint, "click to start npoint scan", NULL);
         gtk_tooltips_set_tip(tooltips, button_bsw, "click to start beam switch", NULL);
-        gtk_tooltips_set_tip(tooltips, button_freq, "click to enter new frequency", NULL);
+        gtk_tooltips_set_tip(tooltips, button_freq, "click to enter new frequency [bw] [nfreq]", NULL);
         gtk_tooltips_set_tip(tooltips, button_offset, "click to enter offsets", NULL);
         if (!d1.cmdfl)
             gtk_tooltips_set_tip(tooltips, button_cmdfl, "click to start cmd file", NULL);
@@ -302,17 +310,19 @@ int main(int argc, char *argv[])
     zerospectra(0);
     for (i = 0; i < d1.nfreq; i++)
         bspec[i] = 1;
-    d1.savmess[0] = 0;
     secstart = d1.nsecstart = -1;
     d1.secs = readclock();
     while (d1.run) {
         zerospectra(1);
         if (d1.clearint) {
-            cleararea();
+            if (d1.displ)
+                cleararea();
             zerospectra(0);
             d1.clearint = 0;
         }
         if (d1.freqchng) {
+            if (d1.dongle)
+                Init_Device(1);
             if (d1.printout) {
                 toyrday(d1.secs, &yr, &da, &hr, &mn, &sc);
                 printf("%4d:%03d:%02d:%02d:%02d %3s ", yr, da, hr, mn, sc, d1.timsource);
@@ -344,7 +354,8 @@ int main(int argc, char *argv[])
             }
         }
 
-        cleararea();
+        if (d1.displ)
+            cleararea();
         azel(d1.azcmd, d1.elcmd); // allow time after cal 
         if (!d1.slew) {
             pwr = 0.0;
@@ -422,6 +433,8 @@ void zerospectra(int mode)
             d1.scan++;
             if (d1.scan > 26) {
                 d1.scan = 0;
+                if (d1.displ)
+                    gtk_tooltips_set_tip(tooltips, button_npoint, "click to start npoint scan", NULL);
                 d1.azoff = d1.eloff = 0;
                 d1.domap = 1;
             }

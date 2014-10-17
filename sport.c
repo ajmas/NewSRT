@@ -56,48 +56,52 @@ void azel(double az, double el)
     if (d1.displ)
         gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
 
-    if (d1.azelsim == 0) {
+    azz = az - d1.azlim1;
+    ell = el - d1.ellim1;
+    if (!d1.azelsim)
+        d1.comerr = rot2(&azz, &ell, 1, recv); // initial read return if antenna at correct position
+    else {
+        azz = d1.azprev - d1.azlim1;
+        ell = d1.elprev - d1.ellim1;
+    }
+    d1.aznow = azz + d1.azlim1;
+    d1.elnow = ell + d1.ellim1;
+    if (d1.debug)
+        printf("aznow_after_read %3.0f elnow %3.0f\n", d1.aznow, d1.elnow);
+
+    if ((fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0)
+        && (az >= d1.azlim1 && az < d1.azlim2 && el >= d1.ellim1 && el < d1.ellim2)) {
         azz = az - d1.azlim1;
         ell = el - d1.ellim1;
-        d1.comerr = rot2(&azz, &ell, 1, recv); // initial read return if antenna at correct position
-        d1.aznow = azz + d1.azlim1;
-        d1.elnow = ell + d1.ellim1;
-        if (d1.debug)
-            printf("aznow_after_read %3.0f elnow %3.0f\n", d1.aznow, d1.elnow);
-
-        if ((fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0)
-            && (az >= d1.azlim1 && az < d1.azlim2 && el >= d1.ellim1 && el < d1.ellim2)) {
-            azz = az - d1.azlim1;
-            ell = el - d1.ellim1;
+        if (!d1.azelsim) {
             d1.comerr = rot2(&azz, &ell, 2, recv); // command move
             d1.comerr = rot2(&azz, &ell, 1, recv); // read
-            d1.aznow = azz + d1.azlim1;
-            d1.elnow = ell + d1.ellim1;
-            if (d1.debug)
-                printf("aznow_after_cmd %3.0f elnow %3.0f cmd %3.0f %3.0f %3.0f %3.0f\n", d1.aznow, d1.elnow,
-                       d1.azcmd, d1.elcmd, az, el);
+        } else {
+            azz = (d1.azcmd + d1.azprev) * 0.5 - d1.azlim1;
+            ell = (d1.elcmd + d1.elprev) * 0.5 - d1.ellim1;
+            if (fabs(d1.aznow - d1.azcmd) < 2.0)
+                azz = d1.azcmd - d1.azlim1;
+            if (fabs(d1.elnow - d1.elcmd) < 2.0)
+                ell = d1.elcmd - d1.ellim1;
         }
+        d1.azprev = d1.aznow = azz + d1.azlim1;
+        d1.elprev = d1.elnow = ell + d1.ellim1;
+        if (d1.debug)
+            printf("aznow_after_cmd %3.0f elnow %3.0f cmd %3.0f %3.0f %3.0f %3.0f\n", d1.aznow, d1.elnow,
+                   d1.azcmd, d1.elcmd, az, el);
+    }
 
+    if (d1.azelsim)
         sprintf(str, "antenna drive status:");
-        if (d1.comerr > 0) {
-            sprintf(txt, " comerr= %d", d1.comerr);
-            iy = midy * 0.1;
-            if (d1.displ) {
-                gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, ixe,
-                                   iy - midy * 0.04, midxr, midy * 0.05);
-                gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ixe, iy, txt, strlen(txt));
-            }
-        }
-    } else {
-        sprintf(txt, "antenna simulated");
-        d1.aznow = az;
-        d1.elnow = el;
-        sprintf(recv, "az %3.0f el %2.0f", az, el);
+    else
+        sprintf(str, "antenna drive simulated:");
+    if (d1.comerr > 0) {
+        sprintf(txt, " comerr= %d", d1.comerr);
         iy = midy * 0.1;
         if (d1.displ) {
-            gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, ix,
+            gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, ixe,
                                iy - midy * 0.04, midxr, midy * 0.05);
-            gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
+            gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ixe, iy, txt, strlen(txt));
         }
     }
     if (az < d1.azlim1 || az > d1.azlim2 || el < d1.ellim1 || el > d1.ellim2) {
@@ -168,90 +172,98 @@ void azel(double az, double el)
             gdk_draw_line(pixmap, drawing_area->style->fg_gc[GTK_STATE_NORMAL], x, y - 4, x, y + 4);
         }
         n = 0;
-        if (!d1.azelsim) {
-            kk = 0;
-            while (kk < 100 && n == 0) {
-                azz = d1.aznow - d1.azlim1;
-                ell = d1.elnow - d1.ellim1;
+        kk = 0;
+        while (kk < 100 && n == 0) {
+            azz = d1.aznow - d1.azlim1;
+            ell = d1.elnow - d1.ellim1;
+            if (!d1.azelsim)
                 d1.comerr = rot2(&azz, &ell, 1, recv);
-                d1.aznow = azz + d1.azlim1;
-                d1.elnow = ell + d1.ellim1;
+            else {
+                azz = (d1.azcmd + d1.azprev) * 0.5 - d1.azlim1;
+                ell = (d1.elcmd + d1.elprev) * 0.5 - d1.ellim1;
+                if (fabs(d1.aznow - d1.azcmd) < 2.0)
+                    azz = d1.azcmd - d1.azlim1;
+                if (fabs(d1.elnow - d1.elcmd) < 2.0)
+                    ell = d1.elcmd - d1.ellim1;
+            }
+            d1.azprev = d1.aznow = azz + d1.azlim1;
+            d1.elprev = d1.elnow = ell + d1.ellim1;
+            if (d1.printout)
                 printf("aznow %3.0f elnow %3.0f k %d\n", d1.aznow, d1.elnow, kk);
-                if (fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0) {
+            if (fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0) {
+                if (d1.printout)
                     printf("waiting on antenna cmd %3.0f %3.0f now %3.0f %3.0f kk %d\n", d1.azcmd, d1.elcmd,
                            d1.aznow, d1.elnow, kk);
-                    sprintf(txt, "waiting on antenna %d ", kk);
-                    iy = midy * 0.1;
-                    d1.slew = 1;
-                    if (d1.displ) {
-                        ix = midx * 1.55;
+                sprintf(txt, "waiting on antenna %d ", kk);
+                d1.slew = 1;
+                if (d1.displ) {
+                    ix = midx * 1.55;
 
-                        midxr = midx * 2 - ix;
+                    midxr = midx * 2 - ix;
 //                            cleararea();
-                        x = d1.azcmd * midx / 180.0;
-                        if (d1.south == 0)
-                            x -= midx;
-                        if (x < 0)
-                            x += midx * 2;
-                        if (x > midx * 2)
-                            x -= midx * 2;
-                        y = midy * 2 - d1.elcmd * midy * 2.0 / 180.0;
-                        color.red = 0;
-                        color.green = 0;
-                        color.blue = 0xffff;
-                        gdk_color_parse("blue", &color);
+                    x = d1.azcmd * midx / 180.0;
+                    if (d1.south == 0)
+                        x -= midx;
+                    if (x < 0)
+                        x += midx * 2;
+                    if (x > midx * 2)
+                        x -= midx * 2;
+                    y = midy * 2 - d1.elcmd * midy * 2.0 / 180.0;
+                    color.red = 0;
+                    color.green = 0;
+                    color.blue = 0xffff;
+                    gdk_color_parse("blue", &color);
 
-                        gtk_widget_modify_fg(drawing_area, GTK_STATE_NORMAL, &color);
-                        gdk_draw_line(pixmap, drawing_area->style->fg_gc[GTK_STATE_NORMAL], x - 4,
-                                      y, x + 4, y);
-                        gdk_draw_line(pixmap, drawing_area->style->fg_gc[GTK_STATE_NORMAL], x,
-                                      y - 4, x, y + 4);
+                    gtk_widget_modify_fg(drawing_area, GTK_STATE_NORMAL, &color);
+                    gdk_draw_line(pixmap, drawing_area->style->fg_gc[GTK_STATE_NORMAL], x - 4, y, x + 4, y);
+                    gdk_draw_line(pixmap, drawing_area->style->fg_gc[GTK_STATE_NORMAL], x, y - 4, x, y + 4);
 
-
-                        gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, ix,
-                                           iy - midy * 0.04, midxr, midy * 0.05);
-                        gdk_draw_text(pixmap, fixed_font,
-                                      drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
-                        sprintf(txt, "cmd  %5.1f %4.1f deg", d1.azcmd, d1.elcmd);
-                        iy = midy * 0.15;
-                        gdk_draw_text(pixmap, fixed_font,
-                                      drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
-                        sprintf(txt, "azel %5.1f %4.1f deg", d1.aznow, d1.elnow);
-                        iy = midy * 0.20;
-                        gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy,
-                                      txt, strlen(txt));
-                        sprintf(txt, "offsets %5.1f %4.1f deg", d1.azoff, d1.eloff);
-                        iy = midy * 0.25;
-                        gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy,
-                                      txt, strlen(txt));
-                        azel_to_radec(d1.secs, d1.aznow, d1.elnow, &ra, &dec);
-                        sprintf(txt, "ra %5.1f hr %4.1f deg", ra * 12.0 / PI, dec * 180.0 / PI);
-                        iy = midy * 0.30;
-                        gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy,
-                                      txt, strlen(txt));
-                        color.green = color.red = color.blue = 0xffff;
-                        gtk_widget_modify_bg(button_stow, GTK_STATE_NORMAL, &color);
+                    iy = midy * 0.1;
+//                        gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, ix,
+//                                           iy - midy * 0.04, midxr, midy * 0.05);
+                    gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, ix,
+                                       iy - midy * 0.04, midxr, midy * 0.25);
+                    gdk_draw_text(pixmap, fixed_font,
+                                  drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
+                    sprintf(txt, "cmd  %5.1f %4.1f deg", d1.azcmd, d1.elcmd);
+                    iy = midy * 0.15;
+                    gdk_draw_text(pixmap, fixed_font,
+                                  drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
+                    sprintf(txt, "azel %5.1f %4.1f deg", d1.aznow, d1.elnow);
+                    iy = midy * 0.20;
+                    gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy,
+                                  txt, strlen(txt));
+                    sprintf(txt, "offsets %5.1f %4.1f deg", d1.azoff, d1.eloff);
+                    iy = midy * 0.25;
+                    gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy,
+                                  txt, strlen(txt));
+                    azel_to_radec(d1.secs, d1.aznow, d1.elnow, &ra, &dec);
+                    sprintf(txt, "ra %5.1f hr %4.1f deg", ra * 12.0 / PI, dec * 180.0 / PI);
+                    iy = midy * 0.30;
+                    gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy,
+                                  txt, strlen(txt));
+                    color.green = color.red = color.blue = 0xffff;
+                    gtk_widget_modify_bg(button_stow, GTK_STATE_NORMAL, &color);
 
 //                            if (!d1.plot) {
-                        Repaint();
+                    Repaint();
 //                            }
 
 //                            cleararea();
-                        while (gtk_events_pending() || d1.stopproc) {
-                            gtk_main_iteration();
+                    while (gtk_events_pending() || d1.stopproc) {
+                        gtk_main_iteration();
 //                                 d1.plot = 0;
-                        }
+                    }
 
-                    } else if (d1.debug)
-                        printf("%s\n", txt);
-                    sleep(1);
-                } else
-                    n = 1;
-                kk++;
-            }
-            if (d1.debug)
-                printf("recv %s\n", recv);
+                } else if (d1.debug)
+                    printf("%s\n", txt);
+                sleep(1);
+            } else
+                n = 1;
+            kk++;
         }
+        if (d1.debug)
+            printf("recv %s\n", recv);
         if (d1.comerr) {
             sprintf(txt, "comerr %d", d1.comerr);
             iy = midy * 0.1;
@@ -321,7 +333,7 @@ void azel(double az, double el)
         }
         if (d1.comerr == 0) {   // normal response
         }
-        if (d1.azelsim == 0 && d1.slew)
+        if (d1.slew)
             sleep(1);
     }
     if (d1.track != -1) {

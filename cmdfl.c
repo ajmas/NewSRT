@@ -137,8 +137,15 @@ double cmdfile(void)
                     d1.run = 0;
                     gtk_exit(0);
                 }
-                if (strstr(str, "roff"))
+                if (strstr(str, "roff")) {
                     d1.record = 0;
+                    if (d1.displ) {
+                        color.green = 0xffff;
+                        color.red = 0xffff;
+                        color.blue = 0xffff;
+                        gtk_widget_modify_bg(button_record, GTK_STATE_NORMAL, &color);
+                    }
+                }
                 if (strstr(str, "clearint"))
                     d1.clearint = 1;
                 if (strstr(str, "freq")) {

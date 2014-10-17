@@ -1,10 +1,9 @@
 /* globals */
 #include <gtk/gtk.h>
-extern double xloc[], yloc[], bx[], by[], polyb[], pwr, pwrst, pwrprev;
-extern float spec[], avspec[], aavspec[], fft1[], scanpwr[], avspecon[], avspecoff[], bspec[], bbspec[];
+extern double pwr, pwrst, pwrprev;
+extern float spec[], avspec[], aavspec[], scanpwr[], avspecon[], avspecoff[], bspec[], bbspec[];
 extern double pprev;
 extern double ras[], decs[], epoc[];
-extern float aacos[], aasin[];
 extern int soutype[];
 extern char sounam[NSOU][25];
 extern char soutrack[25];

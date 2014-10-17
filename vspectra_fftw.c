@@ -59,7 +59,7 @@ void vspectra(void)
         fft_init(blsiz2, &p0, &reamin0, &reamout0);
     }
 
-    num = 5;                    //was 20   // was 100
+    num = d1.nblk;                    //was 20   // was 100
     nsam = NSAM;
     d1.nsam = NSAM * num;
     avsig = 0;
@@ -185,7 +185,7 @@ void vspectra(void)
 }
 
 // Initilizes and Opens the RTL Dongle
-void Init_Device()
+void Init_Device(int mode)
 {
     int r;
     int i = 0;
@@ -202,6 +202,17 @@ void Init_Device()
     uint32_t samp_rate = 2.4 * 1e6 + 0.5; //1400000;//2400000;//DEFAULT_SAMPLE_RATE;
     int device_count;
     char vendor[256], product[256], serial[256];
+    d1.dongle = 1;
+
+    if (mode) {
+        /* Set the frequency */
+        r = rtlsdr_set_center_freq(dev, frequency);
+        if (r < 0)
+            fprintf(stderr, "WARNING: Failed to set center freq.\n");
+        else if (d1.printout)
+            printf("Tuned to %u Hz.\n", frequency);
+        return;
+    }
 
     device_count = rtlsdr_get_device_count();
     if (!device_count) {
@@ -209,13 +220,16 @@ void Init_Device()
         exit(1);
     }
 
-    fprintf(stderr, "Found %d device(s):\n", device_count);
+    if (d1.printout)
+        printf("Found %d device(s):\n", device_count);
     for (i = 0; i < device_count; i++) {
         rtlsdr_get_device_usb_strings(i, vendor, product, serial);
-        fprintf(stderr, "  %d:  %s, %s, SN: %s\n", i, vendor, product, serial);
+        if (d1.printout)
+            printf("  %d:  %s, %s, SN: %s\n", i, vendor, product, serial);
     }
 
-    fprintf(stderr, "Using device %d: %s\n", dev_index, rtlsdr_get_device_name(dev_index));
+    if (d1.printout)
+        printf("Using device %d: %s\n", dev_index, rtlsdr_get_device_name(dev_index));
 
     r = rtlsdr_open(&dev, dev_index);
     if (r < 0) {
@@ -232,8 +246,8 @@ void Init_Device()
     r = rtlsdr_set_center_freq(dev, frequency);
     if (r < 0)
         fprintf(stderr, "WARNING: Failed to set center freq.\n");
-    else
-        fprintf(stderr, "Tuned to %u Hz.\n", frequency);
+    else if (d1.printout)
+        printf("Tuned to %u Hz.\n", frequency);
 
     if (0 == gain) {
         /* Enable automatic gain */
@@ -250,8 +264,6 @@ void Init_Device()
         r = rtlsdr_set_tuner_gain(dev, gain);
         if (r < 0)
             fprintf(stderr, "WARNING: Failed to set tuner gain.\n");
-        else
-            fprintf(stderr, "Tuner gain set to %f dB.\n", gain / 10.0);
     }
 
     r = rtlsdr_reset_buffer(dev);

@@ -161,11 +161,20 @@ gint Repaint(void)
             }
             y = midy * 2.0 - el * midy * 2 / PI;
             gdk_draw_line(pixmap, drawing_area->style->black_gc, x - 2, y, x + 2, y);
-            gdk_draw_line(pixmap, drawing_area->style->black_gc, x, y - 2, x, y + 2);
+            if(y > midy + 2) y1 = y - 2;
+            else y1 = midy;
+            gdk_draw_line(pixmap, drawing_area->style->black_gc, x, y1, x, y + 2);
+            if(y < midy*1.05) y = midy*1.05;
             gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, x + 2, y, txt, strlen(txt));
         }
     }
 
+
+    if (d1.azelsim) {
+        sprintf(txt, "antenna motion simulated");
+        iy = midy * 0.45;
+        gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
+    }
     sprintf(txt, "Source: %s", soutrack);
     iy = midy * 0.50;
     gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
@@ -372,14 +381,14 @@ gint Repaint(void)
             gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, x + 4, 0, 4, midy);
 // printf("rect ppos %d\n",d1.ppos);
     }
-    if (d1.ptick && fmod(secs, 60) == 0.0) {
+    if (d1.ptick && fmod(secs, 60) < 2.5) {
         x = d1.ppos * midx / 400;
         gdk_draw_line(pixmap, drawing_area->style->black_gc, x, midy, x, midy - 5);
         d1.ptick = 0;
     }
     if (!d1.slew)
         d1.ppos++;
-    if (fmod(secs, 60) >= 0.5)
+    if (fmod(secs, 60) >= 2.5)
         d1.ptick = 1;
     update_rect.x = update_rect.y = 0;
     update_rect.width = drawing_area->allocation.width;
