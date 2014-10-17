@@ -1,0 +1,6 @@
+#!/bin/bash
+CFLAGS=`pkg-config gtk+-2.0 --cflags`
+LIBS=`pkg-config gtk+-2.0 --libs`
+gcc -W -Wall -O3 $CFLAGS $LIBS main.c disp.c plot.c cat.c geom.c time.c outfile.c sport.c map.c cmdfl.c cal.c srthelp.c velspec.c  amdfft.c -lm  -lacml /usr/lib/libgfortran.a 
+cp a.out srtn
+

@@ -1,0 +1,33 @@
+These are files needed to compile an executable to run the "New" SRT
+
+see http://www.haystack.mit.edu/edu/undergrad/srt/index.html
+
+there is a script  named srtnmake to compile:
+
+
+#!/bin/bash
+CFLAGS=`pkg-config gtk+-2.0 --cflags`
+LIBS=`pkg-config gtk+-2.0 --libs`
+gcc -W -Wall -O3 $CFLAGS $LIBS main.c disp.c plot.c cat.c geom.c time.c outfile.c sport.c map.c cmdfl.c cal.c srthelp.c velspec.c  amdfft.c -lm  -lacml /usr/lib/libgfortran.a 
+cp a.out srtn
+
+The drivers for the ADC card  are in  PCI-DAS4020-12.1.21.tgz
+
+This code is "preliminary" and currently only supports the old SRT controller
+for antenna control.
+
+The FFT runs on an AMD CPU and this software needs libgfortran.a and libacml.so (as there maybe problems
+with the fortran library on the PC.) The fortran is only needed for AMDs cfft1d called in amdfft.c
+60-mcc.rules is needed for the ADC card as well as the drivers in PCI-DAS4020-12.1.21.tgz
+
+I hope that when and if someone decides to build the New srt receiver (which itself needs no software)
+and decides to use the DAS4020-12 PCI ADC card and antenna mount controller from Alpha or rfhamdesign
+I will be available to help with hardware and software issues. At present Haystack has no funds to support
+further SRT development and so any assistance will have to be on a "best effort" basis.
+
+Alan Rogers - 15 August 2012
+
+
+
+
+
