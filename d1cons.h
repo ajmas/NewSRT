@@ -3,8 +3,8 @@
 #define NSOU 200
 #define NRFI 25
 #define NSPEC 4096
-//#define NPOLY 15
-#define NPOLY 5
+#define NPOLY 15
+//#define NPOLY 5
 #define NCAL 10
 #define VELC 299792.458
 #define NUMBUTTONS 12

@@ -1,0 +1,6 @@
+: Sun
+: record
+:50
+: roff
+: stow
+

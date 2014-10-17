@@ -1,5 +1,0 @@
-#!/bin/csh -f
-foreach a (main.c disp.c plot.c cat.c geom.c time.c outfile.c sport.c map.c cmdfl.c cal.c srthelp.c velspec.c  amdfft.c)
-indent -kr -ts0 -l110 $a -o temp2
-cat temp2 |tr "\011" " " |tr "\015" " " >! $a
-end

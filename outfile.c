@@ -72,15 +72,15 @@ void outfile(void)
                 yr, da, hr, mn, sc, d1.obsn, d1.aznow, d1.elnow, d1.freq, d1.tsys, d1.tant, d1.vlsr, d1.glat,
                 d1.glon);
     if (d1.record_spec) {
-        istart = d1.f1 * d1.nfreq;
-        istop = d1.f2 * d1.nfreq;
-        sigma = d1.tsys / sqrt((d1.nsam * d1.integ / 20.0e6) * freqsep * 1e6);
+        istart = d1.f1 * d1.nfreq + 0.5;
+        istop = d1.f2 * d1.nfreq + 0.5;
+        sigma = d1.tsys / sqrt((d1.nsam * d1.integ / (2.0e6 * d1.bw)) * freqsep * 1e6);
         if (d1.bsw)
             sigma = 2.0 * sigma;
         fprintf(file1,
                 "Fstart %8.3f fstop %8.3f spacing %8.6f bw %8.3f fbw %8.3f MHz nfreq %d nsam %d npoint %d integ %5.0f sigma %8.3f bsw %d\n",
-                d1.freq - d1.f1 * d1.bw, d1.freq + d1.f1 * d1.bw, freqsep, d1.bw, d1.fbw, d1.nfreq, d1.nsam,
-                istop - istart + 1, d1.integ * d1.nsam / 20.0e6, sigma, d1.bsw);
+                istart*d1.bw/d1.nfreq+d1.efflofreq,istop*d1.bw/d1.nfreq+d1.efflofreq, freqsep, d1.bw, d1.fbw, d1.nfreq, d1.nsam,
+                istop - istart, d1.integ * d1.nsam / (2.0e6 * d1.bw), sigma, d1.bsw);
         fprintf(file1, "Spectrum \n");
         for (i = istart; i < istop; i++)
             fprintf(file1, "%8.3f ", aavspec[i]);

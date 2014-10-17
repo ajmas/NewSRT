@@ -9,29 +9,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <asm/page.h>
 #include <sys/mman.h>
 #include <errno.h>
 
 #include "d1cons.h"
 #include "d1proto.h"
 #include "d1typ.h"
-#include "pci-das4020.h"
-
-#define SPEBW 10.0
-
-int ADC_Mode = ADC_DMA_CONVERSION;
-int Count = 1;
-int Board = 0;
-int Channel = 0;
-int dmamap = 0;
-int Status;
-int freq_A2D = 20000000;
-unsigned short *readBuff;
-
-int fdDAC0, fdDAC1;             /* D/A file descriptors */
-int fdADC, fdADC0, fdADC1, fdADC2, fdADC3; /* A/D file descriptors */
-int fdDIOA, fdDIOB, fdDIOC;     /* DIO file descriptors */
 
 
 d1type d1;
@@ -59,85 +42,12 @@ float bbspec[NSPEC];
 float spec[NSPEC];
 float fft1[NSPEC * 2];
 float scanpwr[26];
-static unsigned short buffer1[0x200000];
 double pwr;
 double pwrst;
 double pwrprev;
 double pprev;
 double polyb[NPOLY];
 int midx, midy;
-char *bus_name[16], *device_name[16];
-
-void DoOpenDevices()
-{
-    char str[80];
-    int *adc_fds[] = { &fdADC0 };
-    int *dio_fds[] = { &fdDIOA };
-
-    sprintf(str, "/dev/das4020-12/ad%d_%d", Board, Channel);
-    if ((*adc_fds[0] = open(str, ADC_Mode | O_NONBLOCK)) < 0) {
-        perror(str);
-        printf("error opening device %s\n", str);
-        exit(2);
-    }
-    ioctl(fdADC0, ADC_SET_GAINS, BP_1_00V);
-    ioctl(fdADC0, ADC_SET_PACER_FREQ, freq_A2D);
-    ioctl(fdADC0, ADC_SET_FIFO_SIZE, 0x8000); // default?
-
-    sprintf(str, "/dev/das4020-12/dio%d_0%c", Board, 'A');
-    if ((*dio_fds[0] = open(str, O_RDWR)) < 0) {
-        perror(str);
-        printf("error opening device %s\n", str);
-        exit(2);
-    }
-    ioctl(fdDIOA, DIO_SET_DIRECTION, PORT_OUTPUT);
-    fdADC = *adc_fds[0];
-}
-
-int get_pci(unsigned short value[], int count)
-{
-    int i;
-    int bytesRead;
-    unsigned int toggle = 0x0;
-
-    Count = count;
-    if (ADC_Mode == ADC_SOFT_CONVERSION) {
-        toggle ^= 0x1;
-        ioctl(fdADC, ADC_PSC_ENB, toggle);
-        bytesRead = read(fdADC, value, Count);
-
-        if (bytesRead != Count) {
-            printf("testADC: Error on read() \n");
-            printf("bytesRead = %d, and specified Count = %d\n", bytesRead, Count);
-        }
-    } else {
-        if (!dmamap) {
-            if ((readBuff = mmap(0, Count * 2, PROT_READ, MAP_PRIVATE, fdADC, 0 * getpagesize()))
-                == (unsigned short *) MAP_FAILED) {
-                printf("Test Failed: Mmap call failed %x \n", (int) readBuff);
-                printf(" %d\n", errno);
-                sleep(3);
-                return (0);
-            } else {
-                printf("Test Passed: Succesfully mmaped %d bytes\n", Count * 2);
-            }
-        }
-        dmamap = 1;
-        /* In the following read calls, the argument value will be ignored */
-        /* Since we DMA to stuff over to the address held by readBuff     */
-
-        bytesRead = read(fdADC, value, Count);
-
-        if (bytesRead != Count) {
-            return bytesRead;
-        }
-
-        for (i = 0; i < Count; i++) {
-            value[i] = readBuff[i];
-        }
-    }
-    return (Count);
-}
 
 
 
@@ -156,7 +66,7 @@ int main(int argc, char *argv[])
 //    GdkRectangle update_rect;
     mode = 0;
     sprintf(d1.catnam, "srt.cat");
-    sprintf(d1.hlpnam, "%s.hlp", argv[0]);
+    sprintf(d1.hlpnam, "srt.hlp");
     for (i = 0; i < argc - 1; i++) {
         sscanf(argv[i], "%63s", buf);
         if (strstr(buf, "-c") && strlen(buf) == 2)
@@ -177,11 +87,11 @@ int main(int argc, char *argv[])
     d1.ppos = 0;
     d1.printout = 1;
     d1.debug = 0;
-    d1.freq = 1420.0;           // default
-    d1.lofreq = 1416.0;         // fixed
-    d1.bw = 10;                 // fixed
-    d1.fbw = 4.0 / d1.bw;       // default
+    d1.freq = 1420.4;           // default
+    d1.bw = 0;                  // set to 2.4 for TV dongle 10 MHz for ADC card in init
+    d1.fbw = 0;                 // set in init or srt.cat
     d1.record_int_sec = 0;
+    d1.freqcorr = 0;            // frequency correction for L.O. may be needed for TV dongle
     d1.freqchng = 0;
     d1.clearint = 0;
     d1.nfreq = NSPEC;
@@ -198,11 +108,12 @@ int main(int argc, char *argv[])
     d1.rod3 = 2.0;              // pushrod collar offset
     d1.rod4 = 110.0;            // angle at horizon
     d1.rod5 = 30.0;             // pushrod counts per inch
-    d1.azelsim = d1.radiosim = 0;
+    d1.azelsim = d1.radiosim = d1.fftsim = 0;
     d1.mainten = 0;
     d1.calcons = 1.0;
     d1.caldone = 0;
     d1.nrfi = 0;
+    d1.rfisigma = 6;            // level for RFI reporting to screen
     d1.tload = 300.0;
     d1.tspill = 20.0;
     d1.beamw = 5.0;
@@ -214,7 +125,7 @@ int main(int argc, char *argv[])
     d1.eloff = 0.0;
     d1.drift = 0;
     d1.tstart = 0;
-    d1.tsys = 100.0;
+    d1.tsys = 100.0;            // expected on cold sky
     d1.pwroff = 0.0;
     d1.tant = 100.0;
     d1.calpwr = 0;
@@ -237,23 +148,18 @@ int main(int argc, char *argv[])
     pwrst = pwrprev = 0.0;
     soutrack[0] = 0;
     sprintf(d1.cmdfnam, "cmd.txt");
-    sprintf(d1.datadir, "/data/");
+    sprintf(d1.datadir, "./");  // default to local directory
 
     if (!catfile())
         return 0;
-    d1.iffreq = d1.freq - d1.lofreq;
-    d1.f1 = d1.iffreq / d1.bw - d1.fbw * 0.5;
-    d1.f2 = d1.iffreq / d1.bw + d1.fbw * 0.5;
-    d1.fc = (d1.f1 + d1.f2) * 0.5;
     d1.foutstatus = 0;
 // to get permission su root chown root srtn then chmod u+s srtn then exit 
     if (!d1.azelsim) {
-        if (d1.azelport <= 0x3ff)
-            i = ioperm(d1.azelport, 8, 1);
-        else
-            i = iopl(3);
-        if (i) {
-            printf("Couldn't grab azel ports\n");
+        printf("initializing antenna controller\n");
+        i = rot2(&d1.aznow, &d1.elnow, -1, buf); // initialize
+        i = rot2(&d1.aznow, &d1.elnow, 1, buf); // read
+        if (i < 0) {
+            printf("Couldn't talk to antenna controller\n");
             return 0;
         }
     }
@@ -273,7 +179,7 @@ int main(int argc, char *argv[])
     }
 
     if (!d1.radiosim)
-        DoOpenDevices();        // needed for mmap etc.
+        Init_Device();          // for dongle
 
     if (d1.displ) {
         gtk_init(&argc, &argv);
@@ -286,10 +192,7 @@ int main(int argc, char *argv[])
         table = gtk_table_new(30, NUMBUTTONS, TRUE);
 
         drawing_area = gtk_drawing_area_new();
-//      gtk_drawing_area_size (GTK_DRAWING_AREA (drawing_area), 1010 / d1.displ,680 / d1.displ);
-//      gtk_window_set_default_size(GTK_WINDOW(window),1010,700);
         gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
-// cannot make smaller   gtk_widget_set_size_request (drawing_area, 1010, 600); 
         color.red = 0xffff;
         color.blue = 0xffff;
         color.green = 0xffff;
@@ -392,11 +295,9 @@ int main(int argc, char *argv[])
         clearpaint();
     }
     ii = 0;
-    i = d1.lofreq * 1e6 + 0.5;
     if (d1.printout) {
         toyrday(d1.secs, &yr, &da, &hr, &mn, &sc);
         printf("%4d:%03d:%02d:%02d:%02d %3s ", yr, da, hr, mn, sc, d1.timsource);
-        printf("lofreq %d\n", i);
     }
     zerospectra(0);
     for (i = 0; i < d1.nfreq; i++)
@@ -412,11 +313,9 @@ int main(int argc, char *argv[])
             d1.clearint = 0;
         }
         if (d1.freqchng) {
-            i = d1.lofreq * 1e6 + 0.5;
             if (d1.printout) {
                 toyrday(d1.secs, &yr, &da, &hr, &mn, &sc);
                 printf("%4d:%03d:%02d:%02d:%02d %3s ", yr, da, hr, mn, sc, d1.timsource);
-                printf("lofreq %d\n", i);
             }
             if (!d1.radiosim) {
                 sleep(1);
@@ -424,7 +323,6 @@ int main(int argc, char *argv[])
             zerospectra(0);
             d1.freqchng = 0;
         }
-        d1.freq = d1.lofreq + d1.iffreq;
         if (d1.docal) {
             if (d1.bsw) {
                 d1.bsw = 0;
@@ -452,7 +350,7 @@ int main(int argc, char *argv[])
             pwr = 0.0;
         }
         if (!d1.slew)
-            vspectra(buffer1);
+            vspectra();
         d1.secs = readclock();
         aver();
         d1.integ2++;
@@ -461,40 +359,6 @@ int main(int argc, char *argv[])
             d1.integ2 = 0;
         }
         if (d1.displ) {
-//                    Repaint();
-/*
-                        update_rect.width = drawing_area->allocation.width;
-                        update_rect.height = drawing_area->allocation.height;
-                        gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE,
-                                           1.5 * drawing_area->allocation.width / 2,
-                                           0.30 * drawing_area->allocation.height / 2,
-                                           drawing_area->allocation.width / 2,
-                                           0.05 * drawing_area->allocation.height / 2);
-                        gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE,
-                                           1.5 * drawing_area->allocation.width / 2,
-                                           0.95 * drawing_area->allocation.height / 2,
-                                           drawing_area->allocation.width / 2,
-                                           0.05 * drawing_area->allocation.height / 2);
-                        toyrday(d1.secs, &yr, &da, &hr, &mn, &sc);
-                        sprintf(buf, "%4d:%03d:%02d:%02d:%02d %3s", yr, da, hr, mn, sc,d1.timsource);
-                        gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc,
-                                      1.55 * drawing_area->allocation.width / 2,
-                                      0.35 * drawing_area->allocation.height / 2, buf, strlen(buf));
-                        sprintf(buf, "%s", d1.filname);
-                        if (d1.record)
-                            gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc,
-                                          1.45 * drawing_area->allocation.width / 2,
-                                          0.95 * drawing_area->allocation.height / 2, buf, strlen(buf));
-                        update_rect.x = update_rect.y = 0;
-//                        gtk_widget_draw(drawing_area, &update_rect);
-                        gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE,
-                                           1.5 * drawing_area->allocation.width / 2,
-                                           0.30 * drawing_area->allocation.height / 2,
-                                           drawing_area->allocation.width / 2,
-                                           0.05 * drawing_area->allocation.height / 2);
-*/
-
-//                           cleararea();
             if (!d1.plot)
                 Repaint();
             while (gtk_events_pending() || d1.stopproc == 1) {
@@ -508,129 +372,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-
-void vspectra(unsigned short buffer1[])
-{
-
-    int i, j, size, sizep, kk, kkk, num, numm, i4;
-    int k, m, mm, blsiz, blsiz2, nsam, info;
-    double avsig, av;
-    static double vspec[NSPEC];
-    static int wtt[NSPEC];
-    static float ream[NSPEC * 4];
-    double smax, aam, rre, aam2, rre2;
-    double *comm;
-
-    blsiz = NSPEC * 2;
-
-    info = 0;
-    comm = (double *) malloc((5 * blsiz + 100) * sizeof(double));
-    fft_init(blsiz, ream, comm, &info);
-//    printf("comm %x\n",comm);
-
-    nsam = 0x100000;
-    blsiz2 = blsiz / 2;
-    num = 20;                   // was 100
-    d1.nsam = nsam * num;
-    avsig = 0;
-    size = 0;
-    numm = 0;
-    smax = 0;
-    for (i = 0; i < blsiz2; i++)
-        vspec[i] = 0.0;
-    size = -1;
-    if (!d1.radiosim)
-        while (size != nsam)
-            size = get_pci(buffer1, nsam); // wait for transfer to complete
-    sizep = size;
-    for (k = 0; k < num; k++) {
-        if (k < num - 1 && !d1.radiosim)
-            size = get_pci(buffer1, nsam); // start new transfer
-        if (sizep == nsam) {    // work on previous buffer
-            for (kk = 0; kk < sizep / blsiz; kk++) {
-                avsig = 2048;   // should be 2048   
-//                avsig = 2300;
-                kkk = kk * blsiz;
-                for (j = 0; j < blsiz; j++) {
-//                      if(j==0 && kkk==0) printf("sam %f\n",(buffer1[j + kkk] & 0xfff) - avsig);
-                    if (kk % 2 == 0)
-                        ream[2 * j] = ((double) (buffer1[j + kkk] & 0xfff) - avsig);
-                    else
-                        ream[2 * j + 1] = ((double) (buffer1[j + kkk] & 0xfff) - avsig);
-                    if (j && ream[2 * j] > smax)
-                        smax = ream[2 * j];
-                }
-                if (kk % 2 == 1) {
-//                    Four(re, am, blsiz);
-                    cfft(blsiz, ream, comm, &info);
-
-                    for (i = 0; i < blsiz2; i++) {
-                        if (i >= 1) {
-                            rre = ream[2 * i] + ream[2 * (blsiz - i)];
-                            aam = ream[2 * i + 1] - ream[2 * (blsiz - i) + 1];
-                            aam2 = -ream[2 * i] + ream[2 * (blsiz - i)];
-                            rre2 = ream[2 * i + 1] + ream[2 * (blsiz - i) + 1];
-                        } else {
-                            rre = ream[2 * i] + ream[0];
-                            aam = ream[2 * i + 1] - ream[1];
-                            aam2 = -ream[2 * i] + ream[0];
-                            rre2 = ream[2 * i + 1] + ream[1];
-                        }
-                        vspec[i] += rre * rre + aam * aam + rre2 * rre2 + aam2 * aam2;
-                    }
-                }
-            }
-            numm++;
-        }
-        if (!d1.radiosim)
-            while (size != nsam)
-                size = get_pci(buffer1, nsam); // wait for transfer to complete
-        sizep = size;
-    }
-    if (d1.radiosim) {
-        for (i = 0; i < blsiz2; i++)
-            vspec[i] = 10.0 + gauss();
-        numm = 1;
-    }
-    for (i = 0; i < blsiz2; i++)
-        wtt[i] = 1;
-    if (numm > 0) {
-        if (d1.nfreq == blsiz2) {
-            for (i = 0; i < blsiz2; i++) {
-                if (i > 10)
-                    spec[i] = vspec[i] / (double) numm;
-                else
-                    spec[i] = 0;
-            }
-        } else {
-            m = blsiz2 / d1.nfreq;
-            for (i = 0; i < d1.nrfi; i++) {
-                i4 = (d1.rfi[i] - d1.lofreq) * blsiz2 / 10.0 + 0.5; // index of rfi MHz 
-                if (i4 >= 0 && i4 < blsiz2)
-                    wtt[i4] = 0;
-            }
-            for (j = 0; j < d1.nfreq; j++) {
-                av = mm = 0;
-                for (i = j * m - m / 2; i <= j * m + m / 2; i++) {
-                    if (i > 10 && i < blsiz2 && wtt[i]) { // wtt=0 removal of spurs
-                        av += vspec[i] / (double) numm;
-                        mm++;
-                    }
-                }
-                if (mm > 0)
-                    spec[j] = av / mm;
-                else {
-                    spec[j] = 0;
-                    if (j > 10)
-                        printf("check RFI at %8.3f\n", j * d1.bw / d1.nfreq + d1.lofreq);
-                }
-            }
-        }
-    }
-    d1.smax = smax;
-    free(comm);
-
-}
 
 void zerospectra(int mode)
 {
@@ -714,26 +455,27 @@ void zerospectra(int mode)
     }
 }
 
-
 void aver(void)
 {
     int i, j, j1, j2;
-    double p;
+    double p, a;
     GdkColor color;
-    p = 0;
+    p = a = 0;
     j1 = d1.f1 * d1.nfreq;
     j2 = d1.f2 * d1.nfreq;
     for (i = 0; i < d1.nfreq; i++) {
         avspec[i] += spec[i];
-        if (i > j1 && i < j2)
+        if (i > j1 && i < j2) {
             p += spec[i];
+            a++;
+        }
     }
     d1.integ++;
     i = d1.fc * d1.nfreq;
     if (spec[i] == 0.0)
         return;
     if (d1.calpwr == 0 && spec[i] > 0.0) {
-        printf("calpwr\n");
+//        printf("calpwr\n");
         for (j = 0; j < d1.nfreq; j++)
             bspec[j] = 1;
         if (d1.caldone && d1.displ) {
@@ -743,23 +485,23 @@ void aver(void)
             color.blue = 0xffff;
             gtk_widget_modify_bg(button_cal, GTK_STATE_NORMAL, &color);
         }
-        d1.calpwr = spec[i];
+        d1.calpwr = p / a;
     }
-    pwr = (d1.tsys + d1.tcal) * p / (d1.fbw * d1.nfreq * d1.calpwr);
+    pwr = (d1.tsys + d1.tcal) * p / (a * d1.calpwr);
     if (d1.caldone)
-        d1.tant = pwr;
+        d1.tant = pwr - d1.tsys;
     if (d1.calon) {
 //      pwr=pwr*3.0;
         if (d1.yfac == 0.0)
             d1.yfac = pwr / pwrprev;
     }
-    pwrprev = pwr;
+//    printf("pwr %f pwrprev %f calon %d caldone %d yfac %f\n",pwr,pwrprev,d1.calon,d1.caldone,d1.yfac);
+    if (d1.calon == 0)
+        pwrprev = pwr;
     for (i = 0; i < d1.nfreq; i++)
         aavspec[i] = (d1.tsys + d1.tcal) * avspec[i] / (bspec[i] * d1.calpwr * d1.integ);
 //  printf("d1.calpwr %f %f\n",d1.calpwr, aavspec[(int)(0.4*d1.nfreq)]);
     if (d1.scan != 0) {
-        if (d1.azelsim && d1.scan == 14)
-            pwr = 2.0 * pwr;
         scanpwr[d1.scan - 1] = pwr;
     }
     if (d1.bsw && d1.track) {
@@ -798,7 +540,7 @@ double gauss(void)
 {
     double v1, v2, r, fac, aamp, vv1;
     static int j;
-    r = 0.0;
+    v1 = r = 0.0;
     while (r > 1.0 || r == 0.0) {
         v1 = 2.0 * (rand() / 2147483648.0) - 1.0;
         v2 = 2.0 * (rand() / 2147483648.0) - 1.0;

@@ -5,16 +5,18 @@ typedef struct
   double hgt;
   double integ;
   double integ2;
+  double integ3;
   double dmax;
   double freq;
   double lofreq;
-  double iffreq;
+  double efflofreq;
   double vlsr;
   double start_time;
-  double av, avc, glat, glon, freqsep, intg, restfreq, bw, delay, azoff, eloff, scnazoff, scneloff, calcons, beamw, smax, azcounts_per_deg,
+  double av, avc, glat, glon, intg, restfreq, bw, delay, azoff, eloff, scnazoff, scneloff, calcons, beamw, smax, azcounts_per_deg,
     elcounts_per_deg, rod1,rod2,rod3,rod4,rod5, azlim1, azlim2, ellim1, ellim2, tsys, secs, tant,tload, tspill, aznow, elnow, azcmd, elcmd, 
-    pwroff, pwron, bswpwr, noisecal, avbsw, calpwr, yfac, f1, fc, f2, fbw, tcal;
+    pwroff, pwron, bswpwr, noisecal, avbsw, calpwr, yfac, f1, fc, f2, fbw, tcal, freqcorr, rfisigma;
   double rfi[25];
+  double rfiwid[25];
   int speed_up;
   int nsou;
   int foutstatus;
@@ -38,6 +40,7 @@ typedef struct
     azelport, drift, scan, stow, slew, sourn, bsw, nbsw, bswint, calon, calmode, docal, caldone, rod, stopproc, comerr, limiterr, 
     cmdfl, cmdfline, year, nblk, nsam, unitid, run,wid,whgt,vwid,vwhgt,numon,numoff,psw,entry1,entry2,entry3,entry5,entry6,entry8,
     helpwindow,vwindow,plot,obsn,nrfi;
+  int fftsim;
   unsigned int seed;
   int devices;
   int id;

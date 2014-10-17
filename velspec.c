@@ -163,7 +163,7 @@ void vplot(void)
     double xx, yy, dmax, ddmax, dmin, slope, dd, ddd, totpp, scale, sigma, freq, fstart, fstop, vstart, vstop,
         xoffset;
     double freqsep, x1, x2, y1, y2, wid, sx, sy, yoffset, x, y, xp, yp, av, avx, avy, avxx, avxy, psx1, psx2,
-        psy1, psy2;
+        psy1, psy2, yps;
     double pp[NSPEC];
     FILE *file1 = NULL;
     if (d1.integ == 0.0)
@@ -177,7 +177,7 @@ void vplot(void)
         }
         fprintf(file1, "%%!PS-Adobe-\n%c%cBoundingBox:  0 0 612 792\n%c%cEndProlog\n", '%', '%', '%', '%');
         fprintf(file1, "1 setlinewidth\n");
-        fprintf(file1, "/Times-Roman findfont\n 8 scalefont\n setfont\n");
+        fprintf(file1, "/Times-Roman findfont\n 10 scalefont\n setfont\n");
         fprintf(file1, "0 0 0 sethsbcolor\n");
     }
     wid = 500.0;
@@ -189,7 +189,8 @@ void vplot(void)
     dmax = ddmax = -1.0e99;
     dmin = 1.0e99;
     dd = sigma = 0.0;
-    np = d1.nfreq * d1.fbw;
+    np = d1.nfreq * d1.fbw / d1.bw + 0.5;
+// printf("np %d %d\n",np,(int) (d1.f1 * d1.nfreq));
     j1 = np * 0.0;
     j2 = np * 1.0;
     jmax = 0;
@@ -224,6 +225,7 @@ void vplot(void)
     }
     xoffset = 80.0;
     yoffset = 50.0;
+    yps = 450.0;                // was 420
     if (dmax > dmin)
         scale = 1.2 * (dmax - dmin);
     else
@@ -234,15 +236,15 @@ void vplot(void)
         xx = d1.freq;
 
     if (np > 1) {
-        sprintf(txt, "integ. %5.1f m", (d1.integ * d1.nsam) / (20.0e6 * 60.0));
-        sigma = d1.tsys / sqrt((d1.nsam * d1.integ / 20.0e6) * freqsep * 1e6);
+        sprintf(txt, "integ. %5.1f m", (d1.integ * d1.nsam) / (2.0e6 * d1.bw * 60.0));
+        sigma = d1.tsys / sqrt((d1.nsam * d1.integ / (2.0e6 * d1.bw)) * freqsep * 1e6);
         if (d1.bsw != 0)
             sigma *= 2.0;
         x1 = (xoffset + 200.0) * sx;
         y1 = (yoffset + 15.0) * sy;
         gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
         psx1 = x1 / sx;
-        psy1 = 420.0 - y1 / sy;
+        psy1 = yps - y1 / sy;
         if (d1.psw)
             fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
         if (soutrack[0] > 0) {
@@ -251,7 +253,7 @@ void vplot(void)
             y1 = (yoffset + 15.0) * sy;
             gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             if (d1.psw)
                 fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
             if (!strstr(soutrack, "Sun") && !strstr(soutrack, "Moon")) {
@@ -260,7 +262,7 @@ void vplot(void)
                 y1 = (yoffset + 15.0) * sy;
                 gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
                 psx1 = x1 / sx;
-                psy1 = 420.0 - y1 / sy;
+                psy1 = yps - y1 / sy;
                 if (d1.psw)
                     fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
             }
@@ -268,25 +270,25 @@ void vplot(void)
         for (y = 0; y < 2; y++) {
             x1 = xoffset * sx;
             y1 = (yoffset + y * 319) * sy;
-            x2 = (xoffset + 319) * sx;
+            x2 = (xoffset + 320) * sx;
             y2 = (yoffset + y * 319) * sy;
             gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             psx2 = x2 / sx;
-            psy2 = 420.0 - y2 / sy;
+            psy2 = yps - y2 / sy;
             if (d1.psw)
                 fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                         psx2, psy2);
-            x1 = (xoffset + y * 319) * sx;
+            x1 = (xoffset + y * 320) * sx;
             y1 = (yoffset) * sy;
-            x2 = (xoffset + y * 319) * sx;
+            x2 = (xoffset + y * 320) * sx;
             y2 = (yoffset + 319) * sy;
             gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             psx2 = x2 / sx;
-            psy2 = 420.0 - y2 / sy;
+            psy2 = yps - y2 / sy;
             if (d1.psw)
                 fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                         psx2, psy2);
@@ -294,11 +296,11 @@ void vplot(void)
 
         yp = 0;
         xp = (npoint - 1) * 320.0 / (double) npoint;
+// spec plot start
         for (j = 1; j < npoint; j++) {
             x = (npoint - j) * 320.0 / (double) npoint;
             xx = j / (double) npoint;
-            k = (int) (xx * (double) np);
-//        k = (int)(xx * 10);
+            k = (int) (xx * (double) np + 0.5);
             if (k >= np)
                 k = np - 1;
             if (scale > 0.0)
@@ -313,7 +315,7 @@ void vplot(void)
             if (j == 1)
                 yp = y;
             if (y != yp) {
-                if (k >= j1 + 1 && k < j2 - 1)
+                if (k >= j1 + 1 && k <= j2 - 1)
                     i = 1;
                 else
                     i = 0;
@@ -323,9 +325,9 @@ void vplot(void)
                     x2 = (xp + xoffset) * sx;
                     gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y1);
                     psx1 = x1 / sx;
-                    psy1 = 420.0 - y1 / sy;
+                    psy1 = yps - y1 / sy;
                     psx2 = x2 / sx;
-                    psy2 = 420.0 - y2 / sy;
+                    psy2 = yps - y2 / sy;
                     if (d1.psw)
                         fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1,
                                 psy1, psx2, psy1);
@@ -337,9 +339,9 @@ void vplot(void)
                     y2 = (yoffset + y) * sy;
                     gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x1, y2);
                     psx1 = x1 / sx;
-                    psy1 = 420.0 - y1 / sy;
+                    psy1 = yps - y1 / sy;
                     psx2 = x2 / sx;
-                    psy2 = 420.0 - y2 / sy;
+                    psy2 = yps - y2 / sy;
                     if (d1.psw)
                         fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1,
                                 psy1, psx1, psy2);
@@ -350,9 +352,9 @@ void vplot(void)
                     y2 = (yoffset + yp) * sy;
                     gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x1, y2);
                     psx1 = x1 / sx;
-                    psy1 = 420.0 - y1 / sy;
+                    psy1 = yps - y1 / sy;
                     psx2 = x2 / sx;
-                    psy2 = 420.0 - y2 / sy;
+                    psy2 = yps - y2 / sy;
                     if (d1.psw)
                         fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1,
                                 psy1, psx1, psy2);
@@ -360,16 +362,7 @@ void vplot(void)
             }
             yp = y;
         }
-/*
-        x1= (xp+xoffset) * sx;
- y1 = (yoffset+ yp) * sy;
-        x2= (1+xoffset) * sx;
- y2 = (yoffset+yp) * sy;
-      gdk_draw_line (vpixmap, vdrawing_area->style->black_gc,x1, y1, x2,y2);
- psx1 = x1/sx; psy1 = 420.0 - y1/sy;
- psx2 = x2/sx; psy2 = 420.0 - y2/sy;
-      if(d1.psw)fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n",psx1,psy1,psx2,psy2);
-*/
+//  plot end
         if (d1.freq > 1500.0)
             d1.restfreq = 1612.201; // OH line
         fstart = d1.freq + (double) (1 - np / 2) * freqsep;
@@ -381,6 +374,8 @@ void vplot(void)
         ddd = 10.0 / n3;
         j1 = (int) (fstart * ddd);
         j2 = (int) (fstop * ddd);
+        if (d1.psw)
+            fprintf(file1, "/Times-Roman findfont\n 10 scalefont\n setfont\n");
         for (j = j1 + 1; j <= j2; j++) {
             dd = ((double) (j) / ddd - d1.freq + (double) (np / 2) * freqsep)
                 * 320.0 / ((double) (np) * freqsep);
@@ -390,9 +385,9 @@ void vplot(void)
             y2 = (yoffset + 319.0) * sy;
             gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             psx2 = x2 / sx;
-            psy2 = 420.0 - y2 / sy;
+            psy2 = yps - y2 / sy;
             if (d1.psw)
                 fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                         psx2, psy2);
@@ -401,21 +396,23 @@ void vplot(void)
             y1 = (yoffset + 335.0) * sy;
             gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             if (d1.psw)
                 fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
-            sprintf(txt, "frequency (MHz)");
+            sprintf(txt, "Frequency (MHz)");
             x1 = (125.0 + xoffset) * sx;
             y1 = (yoffset + 350.0) * sy;
             gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             if (d1.psw)
                 fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
         }
         ddd = 10.0 * n3;
         j1 = (int) (vstart / ddd);
         j2 = (int) (vstop / ddd);
+        if (d1.psw)
+            fprintf(file1, "/Times-Roman findfont\n 8 scalefont\n setfont\n");
         for (j = j1 + 1; j < j2; j++) {
             freq = d1.restfreq - ((double) (j) * ddd + d1.vlsr) * d1.restfreq / 299790.0;
             dd = (freq - d1.freq + (double) (np / 2) * freqsep)
@@ -426,9 +423,9 @@ void vplot(void)
             y2 = (yoffset + 275.0) * sy;
             gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             psx2 = x2 / sx;
-            psy2 = 420.0 - y2 / sy;
+            psy2 = yps - y2 / sy;
             if (d1.psw)
                 fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                         psx2, psy2);
@@ -437,7 +434,7 @@ void vplot(void)
             y1 = (yoffset + 290.0) * sy;
             gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             if (d1.psw)
                 fprintf(file1, "%f %f moveto\n (%s) show\n", psx1 + 5.0, psy1, txt);
             sprintf(txt, "VLSR (km/s)");
@@ -445,10 +442,12 @@ void vplot(void)
             y1 = (yoffset + 305.0) * sy;
             gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             if (d1.psw)
                 fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
         }
+        if (d1.psw)
+            fprintf(file1, "/Times-Roman findfont\n 10 scalefont\n setfont\n");
         dd = log(scale) / log(2.0) - 0.6;
         if (dd < 0.0)
             j = (int) (dd - 0.5);
@@ -466,9 +465,9 @@ void vplot(void)
                 y2 = (yoffset + y) * sy;
                 gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
                 psx1 = x1 / sx;
-                psy1 = 420.0 - y1 / sy;
+                psy1 = yps - y1 / sy;
                 psx2 = x2 / sx;
-                psy2 = 420.0 - y2 / sy;
+                psy2 = yps - y2 / sy;
                 if (d1.psw)
                     fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                             psx2, psy2);
@@ -477,7 +476,7 @@ void vplot(void)
                 y1 = (yoffset + y + 2.0) * sy;
                 gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
                 psx1 = x1 / sx;
-                psy1 = 420.0 - y1 / sy;
+                psy1 = yps - y1 / sy;
                 if (d1.psw)
                     fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
             }
@@ -490,9 +489,9 @@ void vplot(void)
             y2 = (yoffset + yy + 5) * sy;
             gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             psx2 = x2 / sx;
-            psy2 = 420.0 - y2 / sy;
+            psy2 = yps - y2 / sy;
             if (d1.psw)
                 fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                         psx2, psy2);
@@ -502,9 +501,9 @@ void vplot(void)
             y2 = (yoffset + 5) * sy;
             gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             psx2 = x2 / sx;
-            psy2 = 420.0 - y2 / sy;
+            psy2 = yps - y2 / sy;
             if (d1.psw)
                 fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                         psx2, psy2);
@@ -514,9 +513,9 @@ void vplot(void)
             y2 = (yoffset + yy + 5) * sy;
             gdk_draw_line(vpixmap, vdrawing_area->style->black_gc, x1, y1, x2, y2);
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             psx2 = x2 / sx;
-            psy2 = 420.0 - y2 / sy;
+            psy2 = yps - y2 / sy;
             if (d1.psw)
                 fprintf(file1, "newpath\n %5.1f %5.1f moveto \n %5.1f %5.1f lineto\nstroke\n", psx1, psy1,
                         psx2, psy2);
@@ -525,7 +524,7 @@ void vplot(void)
             y1 = (yoffset + yy * 0.5 + 5) * sy;
             gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             if (d1.psw)
                 fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
             sprintf(txt, "sigma");
@@ -533,7 +532,7 @@ void vplot(void)
             y1 = (yoffset + yy * 0.5 + 13) * sy;
             gdk_draw_text(vpixmap, vfixed_font, vdrawing_area->style->black_gc, x1, y1, txt, strlen(txt));
             psx1 = x1 / sx;
-            psy1 = 420.0 - y1 / sy;
+            psy1 = yps - y1 / sy;
             if (d1.psw)
                 fprintf(file1, "%f %f moveto\n (%s) show\n", psx1, psy1, txt);
         }

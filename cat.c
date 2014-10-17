@@ -47,6 +47,8 @@ int catfile(void)
                     d1.azelsim = 1;
                 if (strstr(buf, "RECEIVER"))
                     d1.radiosim = 1;
+                if (strstr(buf, "FFT"))
+                    d1.fftsim = 1;
             }
             if (kmatch(buf, "MAINTENANCE"))
                 d1.mainten = 1;
@@ -92,9 +94,10 @@ int catfile(void)
                 sscanf(buf, "%*s %lf", &d1.tsys);
             if (kmatch(buf, "FREQUENCY "))
                 sscanf(buf, "%*s %lf", &d1.freq);
+            if (kmatch(buf, "FREQCORR ")) // frequency correction for dongle in MHz
+                sscanf(buf, "%*s %lf", &d1.freqcorr);
             if (kmatch(buf, "BANDWIDTH ")) {
                 sscanf(buf, "%*s %lf", &d1.fbw);
-                d1.fbw = d1.fbw / d1.bw; // make fractional
             }
             if (kmatch(buf, "NUMFREQ ")) {
                 sscanf(buf, "%*s %d", &d1.nfreq);
@@ -149,8 +152,12 @@ int catfile(void)
                 if (d1.nsou < NSOU)
                     d1.nsou++;
             }
+            if (kmatch(buf, "RFISIGMA ")) { // level at which to report RFI default = 6 
+                sscanf(buf, "%*s %lf", &d1.rfisigma);
+            }
             if (kmatch(buf, "RFI ")) {
-                sscanf(buf, "%*s %lf", &d1.rfi[d1.nrfi]);
+                d1.rfiwid[d1.nrfi] = 0;
+                sscanf(buf, "%*s %lf %lf", &d1.rfi[d1.nrfi], &d1.rfiwid[d1.nrfi]);
                 if (d1.nrfi < NRFI)
                     d1.nrfi++;
             }

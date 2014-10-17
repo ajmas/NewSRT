@@ -142,23 +142,21 @@ double cmdfile(void)
                 if (strstr(str, "clearint"))
                     d1.clearint = 1;
                 if (strstr(str, "freq")) {
-                    bw = 4.0;
+                    bw = d1.bw;
                     sscanf(str, "%*s %*s %lf %lf", &freq, &bw);
                     if (bw > 0 && bw <= 10.0)
-                        d1.fbw = bw / d1.bw;
-                    if (freq > 1200.0 && freq < 1800.0) {
-                        d1.freq = freq;
-                        d1.iffreq = d1.freq - d1.lofreq;
-                        d1.f1 = d1.iffreq / d1.bw - d1.fbw * 0.5;
-                        d1.f2 = d1.iffreq / d1.bw + d1.fbw * 0.5;
-                        d1.fc = (d1.f1 + d1.f2) * 0.5;
-                        if (d1.printout) {
-                            toyrday(d1.secs, &yr, &da, &hr, &mn, &sc);
-                            printf("%4d:%03d:%02d:%02d:%02d %3s ", yr, da, hr, mn, sc, d1.timsource);
-                            printf("new freq %f %f\n", d1.freq, d1.iffreq);
+                        if (freq > 1200.0 && freq < 1800.0) {
+                            d1.freq = freq;
+                            d1.f1 = 0.5 - bw * 0.5;
+                            d1.f2 = 0.5 + bw * 0.5;
+                            d1.fc = (d1.f1 + d1.f2) * 0.5;
+                            if (d1.printout) {
+                                toyrday(d1.secs, &yr, &da, &hr, &mn, &sc);
+                                printf("%4d:%03d:%02d:%02d:%02d %3s ", yr, da, hr, mn, sc, d1.timsource);
+                                printf("new freq %f %f\n", d1.freq, d1.freq);
+                            }
+                            d1.freqchng = 1;
                         }
-                        d1.freqchng = 1;
-                    }
                 }
             }
             i = 0;

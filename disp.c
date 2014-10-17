@@ -80,28 +80,26 @@ void hit_enter_freq(void)
     double freq, bw;
     int n;
     freq = 1420;
-    bw = 4.0;
+    bw = d1.bw;
     if (!d1.entry3)
         return;
     str = gtk_entry_get_text(GTK_ENTRY(entry3));
     if (str != NULL)
         sscanf(str, "%*s %*s %lf %lf %d", &freq, &bw, &n);
     if (bw > 0 && bw <= 10.0)
-        d1.fbw = bw / d1.bw;
-    if (freq > 1200.0 && freq < 1800.0) {
-        d1.freq = freq;
-        d1.nfreq = n;
-        if (d1.nfreq > NSPEC || d1.nfreq < 1)
-            d1.nfreq = NSPEC;
-        d1.iffreq = d1.freq - d1.lofreq;
-        d1.f1 = d1.iffreq / d1.bw - d1.fbw * 0.5;
-        d1.f2 = d1.iffreq / d1.bw + d1.fbw * 0.5;
-        d1.fc = (d1.f1 + d1.f2) * 0.5;
-        if (d1.debug)
-            printf("new freq %f %f %d\n", d1.lofreq, d1.iffreq, d1.nfreq);
-        d1.freqchng = 1;
-        d1.calpwr = 0;
-    }
+        if (freq > 1200.0 && freq < 1800.0) {
+            d1.freq = freq;
+            d1.nfreq = n;
+            if (d1.nfreq > NSPEC || d1.nfreq < 1)
+                d1.nfreq = NSPEC;
+            d1.f1 = 0.5 - d1.bw * 0.5;
+            d1.f2 = 0.5 + d1.bw * 0.5;
+            d1.fc = (d1.f1 + d1.f2) * 0.5;
+            if (d1.debug)
+                printf("new freq %f %d\n", d1.freq, d1.nfreq);
+            d1.freqchng = 1;
+            d1.calpwr = 0;
+        }
     d1.stopproc = 0;
     gtk_entry_set_text(GTK_ENTRY(entry3), "");
     gtk_widget_destroy(entry3);
@@ -315,7 +313,7 @@ void button_cal_clicked(void)
     gtk_table_attach(GTK_TABLE(table), entry8, 0, NUMBUTTONS, 2, 3, GTK_FILL, GTK_FILL, 0, 0);
     gtk_widget_show(entry8);
     g_signal_connect(G_OBJECT(entry8), "activate", G_CALLBACK(hit_enter_cal), NULL);
-    if (d1.calmode == 0)
+    if (d1.calmode == 0 || d1.calmode == 20)
         gtk_entry_set_text(GTK_ENTRY(entry8), "place absorber enter: ");
     if (d1.calmode == 2)
         gtk_entry_set_text(GTK_ENTRY(entry8), "enter to start bandpass cal: ");
@@ -374,7 +372,7 @@ gint button_press_event(GtkWidget * widget, GdkEventButton * event)
     } else
         return TRUE;
     if (d1.debug)
-        printf("x= %d y= %d midx %d midy %d\n", x, y, midx, midy);
+        printf("x= %d y= %d midx %d midy %d width %d\n", x, y, midx, midy, widget->allocation.width);
     secs = d1.secs;
     min = 1e99;
     imin = -1;

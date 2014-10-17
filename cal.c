@@ -17,7 +17,7 @@ void cal(int mode)
     int k;
     int ix, iy, midxr, ixe;
     char txt[80];
-    double av;
+    double av, max, maxf, p, a;
     float wtt[NSPEC];
     GdkColor color;
 
@@ -26,28 +26,49 @@ void cal(int mode)
             bbspec[k] = 0;
         zerospectra(0);
         d1.calon = 1;
+        d1.integ3 = 0;
     }
-    if (mode == 1)
+    if (mode == 1) {
         for (k = 0; k < d1.nfreq; k++)
             bbspec[k] += spec[k];
+        d1.integ3++;
+    }
     if (mode == 2) {
         d1.calon = 0;
+        max = -1e99;
+        maxf = 0;
         for (k = 0; k < d1.nfreq; k++) {
             if (k > d1.f1 * d1.nfreq && k < d1.f2 * d1.nfreq)
                 wtt[k] = 1;
             else
                 wtt[k] = 0;
+            if (spec[k] > max) {
+                max = spec[k];
+                maxf = k * d1.bw / d1.nfreq + d1.efflofreq;
+            }
         }
         polyfitr(NPOLY, d1.nfreq, bbspec, wtt, bspec);
 //                  for(k=0;k < d1.nfreq; k++) bspec[k] = bbspec[k];
-        k = d1.fc * d1.nfreq;
-        av = bspec[k];
+        p = a = 0;
+        for (k = 0; k < d1.nfreq; k++) {
+            if (wtt[k]) {
+                p += bspec[k];
+                a++;
+            }
+        }
+        av = p / a;
         for (k = 0; k < d1.nfreq; k++)
             bspec[k] = bspec[k] / av;
-        d1.calpwr = av / d1.integ;
-//                  if(d1.yfac > 2) d1.tsys = 290.0 /(d1.yfac - 1.0);  // put in manually
+        d1.calpwr = p / (a * d1.integ3);
+        if (d1.yfac > 1.5 && d1.calmode == 20)
+            d1.tsys = 290.0 / (d1.yfac - 1.0); // put in Tsys
+        if (d1.calmode == 0)
+            printf("yfac %f Tsys %f\n", d1.yfac, 290.0 / (d1.yfac - 1.0));
+        if (d1.caldone == 0 && d1.calmode != 2)
+            printf("yfac %f tsys %f pwr %f pwrprev %f calmode %d max_pwr %8.3f MHz\n", d1.yfac, d1.tsys, pwr,
+                   pwrprev, d1.calmode, maxf);
+        d1.yfac = 0;            // for next cal
         d1.caldone = 1;
-        printf("yfac %f tsys %f pwr %f pwrprev %f\n", d1.yfac, d1.tsys, pwr, pwrprev);
         if (d1.displ) {
             color.green = 0xffff;
             color.red = 0;

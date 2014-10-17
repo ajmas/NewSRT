@@ -1,0 +1,117 @@
+###Help Data File for the SRT Help window
+### Created 6/10/2005 by Eric Evarts
+### Each set of information is started with ##command_name
+### Each set is ended with ##
+
+##home
+Welcome to the SRT Help Window
+
+Please click on the buttons above to get more information about the features of the SRT software.
+##
+
+##mode
+Mode
+Mode2
+
+##
+
+##npoint
+NPoint
+
+pointing adjustment:
+run npoint on the sun and subtract the azimuth offset from the start of the azimuth limit
+subtract the elevation offset from the starting elevation limit
+if needed tilt and backlash corrections can be added
+
+checking receiver communications problems:
+if antenna communication doesn't work check this first
+make sure receiver is connected - try powering the controller down and back up to reboot the receiver
+
+checking antenna communications:
+disconnect RS232 cable from controller or turn controller off
+srt software should say "waiting on azimuth"
+disconnect antenna coax and antenna cable
+srt software should indicate an immediate timeout in azimuth and elevation
+
+screen saver:
+the screen saver may cause the srt program to stall
+possible solutions are:
+a) minimize srt program when not using
+b) turn off screen saver
+
+error calculations:
+the noise in each spectral bin for a single response from
+the receiver (a single line in the output file) is given
+by tsys / sqrt(resolution * intg. period)
+the resolution for the digital receiver is equal to the spacing.
+However in many cases the errors are determined by systematic effects. For example the errors in a beamswitch continuum observation are estimated from the variance in the data from many on/offs
+##
+
+##beamsw
+Beam Switch
+
+##
+
+##freq
+Frequency
+
+##
+
+##offset
+Offset
+
+##
+
+##record
+Record
+
+##
+
+##cmdfl
+Command file rules:
+(filename srt.cmd)
+
+1] reads one line at a time skipping blank lines, and lines which start with * and lines with past times
+2] stops at and executes any line with current or future time time format:
+line starts with yyyy:ddd:hh:mm:ss and is followed by cmd
+alternate format:   LST:hh:mm:ss   cmd
+current time format:   :   cmd
+current time plus n seconds format:   :n   cmd
+each line MUST start with time or :  or * for comment
+
+command keywords:
+items in [ ] are optional
+sourcename,mode,radec,azel,galactic,offset,stow,calibrate,noisecal,record,freq,roff
+ sourcename (any name in catalog) [mode]
+ mode n(for 25_point scan)    b(for beamswitch)
+ radec hh:mm:ss  [sign]dd:mm:ss [epoch] [mode]
+ azel az_deg el_deg
+ galactic glat_deg glon_deg
+ offset azoff_deg eloff_deg
+ stow
+ calibrate (for vane) or noisecal (for noise diode)
+ record [filename] [recordmode(0=normal,1=short,2=add vlsr,3=special,4=summary only)]
+ roff (turns off record)
+short - suppresses recording cmds
+ freq frequency num [spacing] - for analog receiver
+ freq frequency digitalmode - for digital receiver
+Note that 25_point scan runs only once while beamswitch until next cmd
+For example:
+:  Sun
+:60
+:600 Sun n
+:  stow
+goes to the sun,waits 60 seconds,does 25 point
+and after 600 seconds goes to stow
+Note that the seconds to wait is right next to the ":"
+and otherwise there is a space before the command
+
+ A command file can be checked by running java in simulate mode  -see help on cmdline options
+another name for a command file can be entered by clicking
+on the text area.
+##
+
+##cal
+Calibration
+
+##

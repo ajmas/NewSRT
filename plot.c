@@ -175,10 +175,10 @@ gint Repaint(void)
     sprintf(txt, "Freq %8.3f MHz", d1.freq);
     iy = midy * 0.75;
     gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
-    sprintf(txt, "I.F. %8.3f MHz", d1.iffreq);
+    sprintf(txt, "I.F. %8.3f MHz", d1.bw * 0.5);
     iy = midy * 0.80;
     gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
-    sprintf(txt, "BW   %8.3f MHz", d1.fbw * d1.bw);
+    sprintf(txt, "BW   %8.3f MHz", d1.fbw);
     iy = midy * 0.85;
     gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
 
@@ -228,7 +228,7 @@ gint Repaint(void)
     sprintf(txt, "vlsr %3.0fkm/s l=%3.0f b=%3.0f", d1.vlsr, d1.glon, d1.glat);
     gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc,
                   midx * 1.55, midy * 0.6, txt, strlen(txt));
-    sprintf(txt, "integ=%5.0f sec", d1.integ * d1.nsam / 20e6);
+    sprintf(txt, "integ=%5.0f sec", d1.integ * d1.nsam / (2.0e6 * d1.bw));
     gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc,
                   midx * 1.55, midy * 0.65, txt, strlen(txt));
     if (d1.tsys > 0.0)
@@ -242,7 +242,7 @@ gint Repaint(void)
         gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, midx * 1.2,
                       midy * 0.05, txt, strlen(txt));
     } else {
-        sprintf(txt, "0-10MHz IF");
+        sprintf(txt, "%3.1fMHz IF", d1.bw);
         gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, midx * 1.2,
                       midy * 0.05, txt, strlen(txt));
     }
@@ -283,9 +283,12 @@ gint Repaint(void)
             if (d1.bsw)
                 ddt = (max - min);
             if (d1.tsys > 0.0) {
-                if (!d1.bsw || iav == 1)
-                    sprintf(txt, "fs %5.2fK pwr %5.2f", ddt, pwr);
-                else
+                if (!d1.bsw || iav == 1) {
+                    if (d1.caldone)
+                        sprintf(txt, "fs %5.2fK Tant %4.1fK", ddt, d1.tant);
+                    else
+                        sprintf(txt, "fs %5.2fK pwr %4.1f", ddt, pwr);
+                } else
                     sprintf(txt, "fs %5.2fK bswpwr %5.2f", ddt, d1.bswpwr);
             } else
                 sprintf(txt, "%5.1e", ddt);
@@ -306,7 +309,7 @@ gint Repaint(void)
             if (iav == 0)
                 x2 = xst + i * midx * xsz / d1.nfreq;
             if (iav > 0)
-                x2 = xst + (i - istart) * midx * xsz / (d1.nfreq * d1.fbw); // 2 to 6 MHz
+                x2 = xst + (i - istart) * midx * xsz / (d1.nfreq * d1.fbw / d1.bw); // 2 to 6 MHz
             c = spec[i];
             if (iav == 1)
                 c = spec[i] / bspec[i];
@@ -338,7 +341,10 @@ gint Repaint(void)
     }
     if (d1.tsys > 0.0) {
         iy = midy * 0.30;
-        sprintf(txt, "Tsys %4.0f smax %4.0f", d1.tsys, d1.smax);
+        if (!d1.caldone)
+            sprintf(txt, "Tsys %4.0f smax %4.0f", d1.tsys, d1.smax);
+        else
+            sprintf(txt, "Tsys %4.0f smax %4.0f", d1.tsys + d1.tant, d1.smax);
         gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, midx * 1.1, iy, txt, strlen(txt));
     }
     if (!d1.slew) {
