@@ -14,6 +14,7 @@ int catfile(void)
     char buf[256], decsign[80];
     double rah, ram, rass, decd, decm, decss, glat, glon;
     int i;
+    int yr, dy, hr, mn, sc;
     d1.nsou = 0;
     d1.track = 0;
     d1.newday = 1;
@@ -36,6 +37,10 @@ int catfile(void)
                 sscanf(buf, "%*s %lf %lf", &d1.azlim1, &d1.azlim2);
             if (kmatch(buf, "ELLIMITS "))
                 sscanf(buf, "%*s %lf %lf", &d1.ellim1, &d1.ellim2);
+            if (kmatch(buf, "STOWPOS ")) {
+                sscanf(buf, "%*s %lf %lf", &d1.stowaz, &d1.stowel);
+                d1.stowatlim = 0;
+            }
             if (kmatch(buf, "NOISECAL "))
                 sscanf(buf, "%*s %lf", &d1.noisecal);
             if (kmatch(buf, "TCAL "))
@@ -52,10 +57,14 @@ int catfile(void)
             }
             if (kmatch(buf, "MAINTENANCE"))
                 d1.mainten = 1;
+            if (kmatch(buf, "RMSCALC"))
+                d1.rms = 0;
             if (kmatch(buf, "PLOTSEC "))
                 sscanf(buf, "%*s %d", &d1.plotsec);
             if (kmatch(buf, "NBSW "))
                 sscanf(buf, "%*s %d", &d1.nbsw);
+            if (kmatch(buf, "NOCLEARINT "))
+                d1.noclearint = 1;
             if (kmatch(buf, "NBLOCK "))
                 sscanf(buf, "%*s %d", &d1.nblk);
             if (kmatch(buf, "NUMPOLY "))
@@ -121,6 +130,8 @@ int catfile(void)
                 sscanf(buf, "%*s %d", &d1.record_int_sec);
                 if (strstr(buf, "SPEC"))
                     d1.record_spec = 1;
+                if (strstr(buf, "RCLR"))
+                    d1.record_clearint = 1; // clears integration each output
             }
             if (kmatch(buf, "NODISPLAY")) {
                 d1.displ = 0;
@@ -131,6 +142,10 @@ int catfile(void)
                 d1.debug = 1;
             if (kmatch(buf, "SPEED_UP "))
                 sscanf(buf, "%*s %d", &d1.speed_up);
+            if (kmatch(buf, "START_DATE ")) {
+                sscanf(buf, "%*s %d:%d:%d:%d:%d", &yr, &dy, &hr, &mn, &sc);
+                d1.start_sec = tosecs(yr, dy, hr, mn, sc);
+            }
             if (kmatch(buf, "SOU ")) {
                 epoc[d1.nsou] = 2000.0; // default
                 sscanf(buf, "%*s %lf %lf %lf %lf %lf %lf %24s %lf", &rah, &ram,

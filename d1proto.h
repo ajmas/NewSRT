@@ -23,7 +23,7 @@ void plotp (double);
 void azel (double, double);
 void cal (int);
 void azel_to_radec (double, double, double, double *, double *);
-void outfile (void);
+void outfile (char *);
 void Four (double *, double *, int);
 double cmdfile (void);
 void zerospectra (int);

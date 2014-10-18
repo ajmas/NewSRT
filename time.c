@@ -140,10 +140,14 @@ double readclock(void)
     if (d1.azelsim) {
         if (d1.start_time == 0.0)
             d1.start_time = secs;
-        if (d1.speed_up > 0)
-            secs = d1.start_time + (secs - d1.start_time) * d1.speed_up;
-        else
-            secs += -d1.speed_up * 3600.0; // advance by hours
+        if (d1.start_sec)
+            secs = d1.start_sec + (secs - d1.start_time) * d1.speed_up;
+        else {
+            if (d1.speed_up > 0)
+                secs = d1.start_time + (secs - d1.start_time) * d1.speed_up;
+            else
+                secs += -d1.speed_up * 3600.0; // advance by hours
+        }
     }
     sprintf(d1.timsource, "PC ");
     return (secs);

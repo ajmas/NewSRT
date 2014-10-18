@@ -161,10 +161,13 @@ gint Repaint(void)
             }
             y = midy * 2.0 - el * midy * 2 / PI;
             gdk_draw_line(pixmap, drawing_area->style->black_gc, x - 2, y, x + 2, y);
-            if(y > midy + 2) y1 = y - 2;
-            else y1 = midy;
+            if (y > midy + 2)
+                y1 = y - 2;
+            else
+                y1 = midy;
             gdk_draw_line(pixmap, drawing_area->style->black_gc, x, y1, x, y + 2);
-            if(y < midy*1.05) y = midy*1.05;
+            if (y < midy * 1.05)
+                y = midy * 1.05;
             gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, x + 2, y, txt, strlen(txt));
         }
     }
@@ -229,7 +232,8 @@ gint Repaint(void)
                     x = midx + az * midx / PI;
             }
             y = midy * 2.0 - el * midy * 2.0 / PI;
-            gdk_draw_point(pixmap, drawing_area->style->black_gc, x, y);
+//            gdk_draw_point(pixmap, drawing_area->style->black_gc, x, y);
+            gdk_draw_rectangle(pixmap, drawing_area->style->black_gc, FALSE, x - 1, y - 1, 2, 2);
         }
 // printf("i %d az %f el %f\n",i,az*180.0/PI,el*180.0/PI);
     }
@@ -258,8 +262,7 @@ gint Repaint(void)
     sprintf(txt, "av. spectrum");
     if (d1.bsw)
         sprintf(txt, "beamswitch %d", d1.bsw);
-    gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, midx * 1.2,
-                  midy * 0.69, txt, strlen(txt));
+    gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, midx * 1.2, midy * 0.68, txt, strlen(txt)); // was 0.69
     for (iav = 0; iav < 3; iav++) {
         max = 1e-6;
         min = 1e99;
@@ -281,16 +284,17 @@ gint Repaint(void)
                 min = c;
         }
 // printf("iav %d max %f min %f\n",iav,max,min);
+        max = max * 1.2;
         yst = midy * 0.0 + iav * midy * 0.32;
         xst = midx + midx * 0.1;
         x1 = xst;
         x2 = x1 + midx * xsz;
         y1 = yst;
         y2 = y1 + midy * 0.25;
-        if (iav && pwr >= 0.0) {
+        if (iav && pwr > 0.0) {
             ddt = d1.tsys * (max - min) / max;
-            if (d1.bsw)
-                ddt = (max - min);
+            if (d1.bsw && iav == 2)
+                ddt = max - min;
             if (d1.tsys > 0.0) {
                 if (!d1.bsw || iav == 1) {
                     if (d1.caldone)
@@ -298,7 +302,7 @@ gint Repaint(void)
                     else
                         sprintf(txt, "fs %5.2fK pwr %4.1f", ddt, pwr);
                 } else
-                    sprintf(txt, "fs %5.2fK bswpwr %5.2f", ddt, d1.bswpwr);
+                    sprintf(txt, "fs %5.2fK bswpwr %5.2fK", ddt, d1.bswpwr);
             } else
                 sprintf(txt, "%5.1e", ddt);
             gdk_draw_text(pixmap, fixed_font,
@@ -337,23 +341,31 @@ gint Repaint(void)
         }
     }
     sprintf(txt, "%s", d1.filname);
-    iy = midy * 0.95;
+    iy = midy * 0.99;
     if (d1.record) {
         gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc,
                       ix - midx * 0.1, iy, txt, strlen(txt));
-        if (d1.foutstatus == 0) {
-            iy = midy * 0.99;
-            sprintf(txt, "record activated");
+//        if (d1.foutstatus == 0) {
+//            iy = midy * 0.99;
+//            sprintf(txt, "record activated");
 //            gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
-
-        }
+//
+//        }
     }
     if (d1.tsys > 0.0) {
         iy = midy * 0.30;
-        if (!d1.caldone)
-            sprintf(txt, "Tsys %4.0f smax %4.0f", d1.tsys, d1.smax);
-        else
-            sprintf(txt, "Tsys %4.0f smax %4.0f", d1.tsys + d1.tant, d1.smax);
+        if (!d1.caldone) {
+            if (d1.rms < 0)
+                sprintf(txt, "Tsys %4.0f smax %4.0f", d1.tsys, d1.smax);
+            else
+                sprintf(txt, "Tsys %4.0f srms %6.1f", d1.tsys, d1.rms);
+        } else {
+            if (d1.rms < 0)
+                sprintf(txt, "Tsys %4.0f smax %4.0f", d1.tsys + d1.tant, d1.smax);
+            else
+                sprintf(txt, "Tsys %4.0f srms %6.1f", d1.tsys + d1.tant, d1.rms);
+
+        }
         gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, midx * 1.1, iy, txt, strlen(txt));
     }
     if (!d1.slew) {

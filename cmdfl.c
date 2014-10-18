@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 #include "d1cons.h"
 #include "d1proto.h"
 #include "d1typ.h"
@@ -17,6 +18,7 @@ double cmdfile(void)
      stow
      calibrate
      quit
+     vplot   // makes postscript of current integration
      clearint      // clears intergation 
      record (turns on data file if not already on) [filename] [recmode]
      roff (turns off data file)
@@ -101,6 +103,8 @@ double cmdfile(void)
                             }
 
                         }
+                        if (!d1.noclearint && !d1.scan && !d1.bsw)
+                            d1.clearint = 1; // clear integration on source change
                     }
                 }
                 if (strstr(str, "azel")) {
@@ -119,10 +123,17 @@ double cmdfile(void)
                 }
                 if (strstr(str, "offset")) {
                     sscanf(str, "%*s %*s %lf %lf", &d1.azoff, &d1.eloff);
+                    sprintf(d1.recnote, "* entered azoff %lf eloff %lf\n", d1.azoff, d1.eloff);
+                    outfile(d1.recnote);
                 }
                 if (strstr(str, "stow")) {
-                    d1.azcmd = d1.azlim1;
-                    d1.elcmd = d1.ellim1;
+                    if (d1.stowatlim) {
+                        d1.azcmd = d1.azlim1;
+                        d1.elcmd = d1.ellim1;
+                    } else {
+                        d1.azcmd = d1.stowaz;
+                        d1.elcmd = d1.stowel;
+                    }
                     soutrack[0] = 0;
                     d1.stow = 1;
                 }
@@ -146,6 +157,10 @@ double cmdfile(void)
                         gtk_widget_modify_bg(button_record, GTK_STATE_NORMAL, &color);
                     }
                 }
+                if (strstr(str, "vplot")) {
+                    velspec();
+                    button_psw_clicked();
+                }
                 if (strstr(str, "clearint"))
                     d1.clearint = 1;
                 if (strstr(str, "freq")) {
@@ -162,6 +177,8 @@ double cmdfile(void)
                                 printf("%4d:%03d:%02d:%02d:%02d %3s ", yr, da, hr, mn, sc, d1.timsource);
                                 printf("new freq %f %f\n", d1.freq, d1.freq);
                             }
+                            sprintf(d1.recnote, "* entered freq %lf nfreq %d\n", d1.freq, d1.nfreq);
+                            outfile(d1.recnote);
                             d1.freqchng = 1;
                         }
                 }

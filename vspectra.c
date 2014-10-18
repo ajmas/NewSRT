@@ -126,6 +126,15 @@ void vspectra(void)
             }
         }
     }
+    if (d1.rms >= 0) {
+        d1.rms = 0;
+        for (i = 0; i < blsiz2; i++)
+            d1.rms += vspec[i];
+        if (d1.fftsim)
+            d1.rms = sqrt(d1.rms / ((double) (numm * 2.0 * blsiz2))); // 2 for re and am
+        else
+            d1.rms = sqrt(d1.rms / ((double) (numm * 2.0))); // amd cfft divides by blsiz2
+    }
 //   printf("max %f min %f\n",max,min);
     max = av = 0;
     maxi = 0;
@@ -180,8 +189,7 @@ void vspectra(void)
     d1.smax = smax;
     if (!d1.fftsim)
         free(comm);
-    if (!d1.radiosim)
-        free(bufferRead);
+    free(bufferRead);
 
 }
 

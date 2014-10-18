@@ -56,36 +56,44 @@ void azel(double az, double el)
     if (d1.displ)
         gdk_draw_text(pixmap, fixed_font, drawing_area->style->black_gc, ix, iy, txt, strlen(txt));
 
-    azz = az - d1.azlim1;
-    ell = el - d1.ellim1;
-    if (!d1.azelsim)
+    azz = az;
+    ell = el;
+    if (!d1.azelsim) {
         d1.comerr = rot2(&azz, &ell, 1, recv); // initial read return if antenna at correct position
-    else {
-        azz = d1.azprev - d1.azlim1;
-        ell = d1.elprev - d1.ellim1;
+        if (d1.comerr == -1) {
+            printf("can't talk to antenna controller\n");
+            return;
+        }
+    } else {
+        azz = d1.azprev;
+        ell = d1.elprev;
     }
-    d1.aznow = azz + d1.azlim1;
-    d1.elnow = ell + d1.ellim1;
+    d1.aznow = azz;
+    d1.elnow = ell;
     if (d1.debug)
         printf("aznow_after_read %3.0f elnow %3.0f\n", d1.aznow, d1.elnow);
 
-    if ((fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0)
+    if ((fabs(d1.aznow - d1.azcmd) > 0.5 || fabs(d1.elnow - d1.elcmd) > 0.5) // was 1 should get within 0.5 deg
         && (az >= d1.azlim1 && az < d1.azlim2 && el >= d1.ellim1 && el < d1.ellim2)) {
-        azz = az - d1.azlim1;
-        ell = el - d1.ellim1;
+        azz = az;
+        ell = el;
         if (!d1.azelsim) {
             d1.comerr = rot2(&azz, &ell, 2, recv); // command move
             d1.comerr = rot2(&azz, &ell, 1, recv); // read
+            if (d1.comerr == -1) {
+                printf("Can't talk to antenna controller\n");
+                return;
+            }
         } else {
-            azz = (d1.azcmd + d1.azprev) * 0.5 - d1.azlim1;
-            ell = (d1.elcmd + d1.elprev) * 0.5 - d1.ellim1;
-            if (fabs(d1.aznow - d1.azcmd) < 2.0)
-                azz = d1.azcmd - d1.azlim1;
-            if (fabs(d1.elnow - d1.elcmd) < 2.0)
-                ell = d1.elcmd - d1.ellim1;
+            azz = (d1.azcmd + d1.azprev) * 0.5;
+            ell = (d1.elcmd + d1.elprev) * 0.5;
+            if (fabs(d1.aznow - d1.azcmd) < 2)
+                azz = d1.azcmd;
+            if (fabs(d1.elnow - d1.elcmd) < 2)
+                ell = d1.elcmd;
         }
-        d1.azprev = d1.aznow = azz + d1.azlim1;
-        d1.elprev = d1.elnow = ell + d1.ellim1;
+        d1.azprev = d1.aznow = azz;
+        d1.elprev = d1.elnow = ell;
         if (d1.debug)
             printf("aznow_after_cmd %3.0f elnow %3.0f cmd %3.0f %3.0f %3.0f %3.0f\n", d1.aznow, d1.elnow,
                    d1.azcmd, d1.elcmd, az, el);
@@ -106,7 +114,7 @@ void azel(double az, double el)
     }
     if (az < d1.azlim1 || az > d1.azlim2 || el < d1.ellim1 || el > d1.ellim2) {
         sprintf(txt, "cmd out of limits");
-        printf("cmd out of limits");
+        printf("cmd out of limits\n");
         iy = midy * 0.10;
         if (d1.displ) {
             color.red = 0xffff;
@@ -125,15 +133,22 @@ void azel(double az, double el)
             printf("%4d:%03d:%02d:%02d:%02d %3s ", yr, da, hr, mn, sc, d1.timsource);
             printf("cmd out of limits az %f el %f\n", az, el);
         }
+        sprintf(d1.recnote, "* cmd out of limits az %f el %f\n", az, el);
+        outfile(d1.recnote);
         if (d1.stow != -1) {
             d1.stow = 1;
-            d1.elcmd = d1.ellim1;
-            d1.azcmd = d1.azlim1;
+            if (d1.stowatlim) {
+                d1.elcmd = d1.ellim1;
+                d1.azcmd = d1.azlim1;
+            } else {
+                d1.elcmd = d1.stowel;
+                d1.azcmd = d1.stowaz;
+            }
         }
         return;
     }
-    if ((fabs(d1.aznow - d1.azcmd) > 1.5 || fabs(d1.elnow - d1.elcmd) > 1.5) && d1.track != -1) {
-        if ((fabs(d1.aznow - d1.azcmd) > 1.5 || fabs(d1.elnow - d1.elcmd) > 1.5) && d1.stow != -1) {
+    if ((fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0) && d1.track != -1) {
+        if ((fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0) && d1.stow != -1) {
             d1.slew = 1;
             sprintf(txt, "ant slewing");
             if (d1.printout) {
@@ -174,20 +189,24 @@ void azel(double az, double el)
         n = 0;
         kk = 0;
         while (kk < 100 && n == 0) {
-            azz = d1.aznow - d1.azlim1;
-            ell = d1.elnow - d1.ellim1;
-            if (!d1.azelsim)
+            azz = d1.aznow;
+            ell = d1.elnow;
+            if (!d1.azelsim) {
                 d1.comerr = rot2(&azz, &ell, 1, recv);
-            else {
-                azz = (d1.azcmd + d1.azprev) * 0.5 - d1.azlim1;
-                ell = (d1.elcmd + d1.elprev) * 0.5 - d1.ellim1;
-                if (fabs(d1.aznow - d1.azcmd) < 2.0)
-                    azz = d1.azcmd - d1.azlim1;
-                if (fabs(d1.elnow - d1.elcmd) < 2.0)
-                    ell = d1.elcmd - d1.ellim1;
+                if (d1.comerr == -1) {
+                    printf("can't talk2 to antenna controller\n");
+                    return;
+                }
+            } else {
+                azz = (d1.azcmd + d1.azprev) * 0.5;
+                ell = (d1.elcmd + d1.elprev) * 0.5;
+                if (fabs(d1.aznow - d1.azcmd) < 2)
+                    azz = d1.azcmd;
+                if (fabs(d1.elnow - d1.elcmd) < 2)
+                    ell = d1.elcmd;
             }
-            d1.azprev = d1.aznow = azz + d1.azlim1;
-            d1.elprev = d1.elnow = ell + d1.ellim1;
+            d1.azprev = d1.aznow = azz;
+            d1.elprev = d1.elnow = ell;
             if (d1.printout)
                 printf("aznow %3.0f elnow %3.0f k %d\n", d1.aznow, d1.elnow, kk);
             if (fabs(d1.aznow - d1.azcmd) > 1.0 || fabs(d1.elnow - d1.elcmd) > 1.0) {
@@ -322,7 +341,7 @@ void azel(double az, double el)
             return;
         }
         if (d1.comerr == -1) {
-//          printf("timeout from antenna\n");
+            printf("timeout from antenna\n");
             sprintf(txt, "timeout from antenna");
             iy = midy * 0.1;
             if (d1.displ) {
@@ -348,7 +367,8 @@ void azel(double az, double el)
         if (x < 0)
             x += 640;
     }
-    if (fabs(d1.aznow - d1.azlim1) < 1e-6 && fabs(d1.elnow - d1.ellim1) < 1e-6) {
+    if ((fabs(d1.aznow - d1.azlim1) < 1e-6 && fabs(d1.elnow - d1.ellim1) < 1e-6 && d1.stowatlim) ||
+        (fabs(d1.aznow - d1.stowaz) < 1e-6 && fabs(d1.elnow - d1.stowel) < 1e-6 && !d1.stowatlim)) {
         if (d1.displ) {
             color.green = 0xffff;
             color.red = color.blue = 0;
@@ -400,29 +420,48 @@ void azel(double az, double el)
 int rot2(double *az, double *el, int cmd, char *resp)
 {
     int usbdev, status, i, rstatus;
+    double azz, ell;
     char command[13];
+    if (d1.stowatlim) {
+        azz = *az - d1.azlim1;
+        ell = *el - d1.ellim1;
+    }                           // allows controller to be set to az=0 el=0 at stow
+    else {
+        azz = *az;
+        ell = *el;
+    }                           // if controller is set to read correct az and el 
 // for perm add to dialout group
     i = rstatus = 0;
-//  system("stty -F /dev/ttyUSB0 600 cs8 -cstopb -parenb -icanon min 1 time 1");
     if (cmd == -1) {
-        system("stty -F /dev/ttyUSB0 600 raw -echo time 2");
+        system("stty -F /dev/ttyUSB0 600 raw -echo -icanon min 0 time 20"); // needed to make timeout work
+//  system("stty -F /dev/ttyUSB0 600 raw -echo -icanon min 12 time 20"); // reads min of 12 chars 10 = up 10x100ms to between chars BUT timeout doesn't work
         return 0;
     }
     usbdev = 0;                 // cmd  0x0f=stop 0x1f=status 0x2f=set
     usbdev = open("/dev/ttyUSB0", O_RDWR, O_NONBLOCK);
-//  printf("usbdev %d\n",usbdev);
     cmd = cmd * 16 + 0xf;
-    sprintf(command, "W%04d%c%04d%c%c ", (int) *az + 360, 1, (int) *el + 360, 1, cmd);
+    sprintf(command, "W%04d%c%04d%c%c ", (int) (azz + 360.5), 1, (int) (ell + 360.5), 1, cmd); // round to nearest degree
 //  for(i=0;i<13;i++) printf("isend=%d ch=%2x\n",i,command[i]);
     status = write(usbdev, command, 13);
-//  printf("write status %d\n",status);
-    sleep(1);
+    if (d1.debug)
+        printf("write status %d cmd %x usbdev %d\n", status, cmd, usbdev);
+    sleep(1);                   // sleep needed
+    if (cmd != 0x1f)
+        sleep(1);               // extra sleep needed
     if (cmd == 0x1f) {
         rstatus = read(usbdev, resp, 12);
-//  printf("read status %d\n",rstatus);
-//  for(i=0;i<12;i++) printf("irec=%d ch=%2x\n",i,resp[i]);
-        *az = resp[1] * 100 + resp[2] * 10 + resp[3] - 360;
-        *el = resp[6] * 100 + resp[7] * 10 + resp[8] - 360;
+        if (d1.debug)
+            printf("read status %d\n", rstatus);
+//   for(i=0;i<12;i++) printf("irec=%d ch=%2x\n",i,resp[i]);
+        azz = resp[1] * 100 + resp[2] * 10 + resp[3] - 360;
+        ell = resp[6] * 100 + resp[7] * 10 + resp[8] - 360;
+        if (d1.stowatlim) {
+            *az = azz + d1.azlim1;
+            *el = ell + d1.ellim1;
+        } else {
+            *az = azz;
+            *el = ell;
+        }
     }
     close(usbdev);
     if (rstatus != 12)

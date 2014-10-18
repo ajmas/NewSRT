@@ -192,6 +192,9 @@ void scanplot(void)
         printf(" max %e at %4.1f %4.1f ", mmax, d1.scnazoff, d1.scneloff);
         printf("azwid %3.1f elwid %3.1f deg\n", azwid * 0.025 * d1.beamw, elwid * 0.025 * d1.beamw);
     }
+    sprintf(d1.recnote, "* Scan results: max %e at %4.1f %4.1f azwid %3.1f elwid %3.1f deg\n", mmax,
+            d1.scnazoff, d1.scneloff, azwid * 0.025 * d1.beamw, elwid * 0.025 * d1.beamw);
+    outfile(d1.recnote);
     if (d1.ppos < 150)
         d1.ppos = 150;
 

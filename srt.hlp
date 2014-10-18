@@ -7,47 +7,56 @@
 Welcome to the SRT Help Window
 
 Please click on the buttons above to get more information about the features of the SRT software.
-srt.cat keywords:
 
-STATION 
-AZLIMITS 
-ELLIMITS
-NOISECAL
-TCAL
-CALMODE
-SIMULATE ANTENNA  RECEIVER FFT
-MAINTENANCE
-PLOTSEC
-NBSW
-NBLOCK
-NUMPOLY
-BEAMWIDTH
-TOLERANCE
+Plot: Click on spectrum to generate a PostScript Plot  with filename yyyy_ddd_hr_mn.ps
+
+srt.cat keywords (see also sample srt.cat file):
+
+STATION lat_deg_North lon_deg_West name 
+AZLIMITS azlim1_deg azlim2_deg - for site in north suggest 5  355   for site in southern hemisphere 185  175
+                               - azlim2 < azlim1 centers display to the north for sites in southern hemisphere 
+ELLIMITS ellim1_deg ellim2_deg
+*STOWPOS  - stow position - recommend using default which is stow at azlim1 ellim1 limits 
+*RMSCALC - calculates rms voltage in units of digits and displays as srms otherwise smax is displayed
+         - displaying smax is recommended a value above 2047 and 127 indicates ADC saturation for pci card dongle respectively
+NOISECAL - strength of noise injection from antenna vertex if available 
+TCAL - temperture of absorber 
+CALMODE - recommend 3
+SIMULATE ANTENNA RECEIVER FFT
+MAINTENANCE - disables a stow position used for testing
+PLOTSEC - not used
+NOCLEARINT - prevents automatic clear of integration on source change
+NBSW - number integration periods per beamswitch cycles
+NBLOCK - number of data acquisition block per display cycle
+NUMPOLY - number of terms in polynonial fit to the bandpass
+BEAMWIDTH deg - antenna beamwidth used to set spacing of 25 point scan 
+TOLERANCE - not used
 CASSIMOUNT - no longer supported
 H180MOUNT - no longer supported
-ALFASPID
-AZCOUNTS
-ELCOUNTS
-AZELPORT
-COMMAND - command file name
-TSYS
-FREQUENCY
+ALFASPID - antenna mount type for old controller
+AZCOUNTS - for old contoller
+ELCOUNTS - for old controller
+AZELPORT - for old controller
+COMMAND - if used this will start running this file when program is started
+TSYS - used in calmodes 2 and 3 - is calculated when calmode 20 is performed
+FREQUENCY - frequency set at startup
 RESTFREQ - for vlsr calculations
 FREQCORR - frequency correction for dongle in MHz
-BANDWIDTH 
-NUMFREQ
+BANDWIDTH - MHz bandwidth used - recommend 2 MHz 
+NUMFREQ - recommend 256 for dongle and up to 1024 for PCI card
 DATADIR - data directory - defaults to directory with the executable
-COUNTPERSTEP 
-RECORD - number of periods per output add [SPEC] to include spectrum 
-NODISPLAY
-NOPRINTOUT
-DEBUG
-SPEED_UP
-SOU - source ra dec epoch
+COUNTPERSTEP - for old contoller
+RECORD - number of periods per output add [SPEC] to include spectrum [RCLR] to clear at start of each block 
+NODISPLAY - can be used when running from command file
+NOPRINTOUT - reduces information written to screen
+DEBUG - adds information written to screen
+SPEED_UP - speeds up time for simulation
+START_DATE 2014:110:12:0:0  // date for simulation - use SPEED_UP to advance
+SOU - source ra dec epoch   // source names Sun and Moon are keywords and have zeros for ra and dec
 GALACTIC - lat long
-AZEL 
+AZEL - fixed positions 
 RFISIGMA - level at which to report RFI default = 6 
-RFI 
+RFI - used to remove RFI from data which cannot be removed at the source
 also see comments in srt.cat
 
 ##
@@ -84,30 +93,41 @@ For example the errors in a beamswitch continuum observation are estimated from 
 
 ##beamsw
 Beam Switch - click on beamsw to start and stop
+total power result is displayed at bswpwr. The Moon should give about 1 K. 
 
 ##
 
 ##freq
-Frequency - optional arguments are bandwidth and number of frequencies
+Frequency in MHz - optional arguments are bandwidth and number of frequencies
 
 ##
 
 ##offset
-Offset - click on offset and enter az el offets in degrees
-with space between entries
+Offset - click on offset and enter az el offets in degrees with space between entries
 
 ##
 
 ##record
 Record - click on record to start and stop 
-RECORD 10 SPEC in srt.cat sets interval to 10 averaging periods where SPEC
-records spectrum. Without the keyword SPEC on the power is recorded
+RECORD 10 in srt.cat sets interval to 10 averaging periods
+this writes the continuum record and is an independent output each 
+averaging period  
+RECORD 10 SPEC adds the accumulated spectrum to the output
+click on clear to clear the spectrum and clear the spectrum integration.
+The accumulated spectrum is normalized by the number of integration periods. It can be
+unnormalized by multiplying by the number of integration periods so that subtraction of the
+previous unormalized spectrum gives the spectrum without accumulation which then can be used to
+remove periods of RFI from the accumulated spectrum. 
+RECORD 10 SPEC RCLR  adds the accumulated spectrum to the output and clears the integration each output
 
 ##
 
 ##cmdfl
 Command file rules:
-(default filename srt.cmd)
+(default filename cmd.txt) 
+The COMMAND keyword in srt.cat file can be used to start a command file automatically when
+the program is started. If you want to be able to enter a command file name remove cmd.txt
+to force a prompt allowing a different name to be entered.
 
 1] reads one line at a time skipping blank lines, and lines which start with * and lines with past times
 2] stops at and executes any line with current or future time time format:
@@ -127,10 +147,12 @@ sourcename,mode,radec,azel,galactic,offset,stow,calibrate,noisecal,record,freq,r
  galactic glat_deg glon_deg
  offset azoff_deg eloff_deg
  stow
- calibrate 
+ vplot (writes Postscript plot to disk with filename yyyy_ddd_hh_mm.ps)
+ calibrate (uses mode specified in srt.cat)
+ clearint (clears the spectrum integration)
  record [optional filename]
  roff (turns off record)
- freq frequency [bandwidth]num 
+ freq frequency [num] 
 Note that 25_point scan runs only once while beamswitch until next cmd
 For example:
 :  Sun
@@ -143,8 +165,7 @@ Note that the seconds to wait is right next to the ":"
 and otherwise there is a space before the command
 
  A command file can be checked by running in simulate mode  -see help on cmdline options
-another name for a command file can be entered by clicking
-on the text area.
+another name for a command file can be entered at the prompt if the default doesn't exist
 ##
 
 ##cal
@@ -165,12 +186,30 @@ The basic method is to get the system temperature from the "Y-factor"
 Since the LNA noise temperature is very stable is in not really necessary
 to get the system temperature every time you point the telescope. What is
 needed is to get the power looking at an absorber or pointing at the trees fairly
-frequently and the the gain of the LNA + amplifiers + dongle change with time.
+frequently as the gain of the LNA + amplifiers + dongle change with time.
 CALMODE 3 is appropriate if you can point at the trees. In this case just click
 on cal and the software will divide by a reference spectrum and convert the power to kelvin
 assuming the power while still pointed at the trees corresponds to Tsys + Tcal. 
 CALMODE 2 does the same by waits for the operator to hit enter when the absorber
 has been placed over the feed.
 
+SRT tests:
+ Check the y-factor and if high run tests with LNA disconnected to check "back-end" noise 
+contribution.
+ Observe the Sun to check pointing and beamwidth. The Sun is variable but you should get
+at least 800 K.
+ It is possible to observe the moon using the beamswitch and you should get about 1 K.
+ Observe the H-line - results can be compared with srt info online 
+ - typical antenna temperature you should observe in the Galactic plane is about 65 K.  
+
+RFI:
+  RFI is becoming more of a problem as the spectrum becomes more crowded and we have more
+electronic devices. The 1400 - 1427 MHz band is reserved for passive use only worldwide.
+However strong transmitters not in this band can cause interference it very nearby and in
+some cases may require the use of a cavity filter between the antenna probe and the LNA.
+Low level signals in the 1400 - 1427 MHz band are produced by PCs, printers, etc. and it may be
+necessary to use a handheld receiver like the AR8200-MK3 to locate these signals and shut them down,
+shield them with absorber, or mode the SRT away from these sources. 
+A good choice of absorber for calibration at 1.4 GHz is eccosorb AN-77
 
 ##

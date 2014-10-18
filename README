@@ -1,4 +1,4 @@
-newsrtsource_ver3 tar ball includes c-code for the "new" SRT
+newsrtsource_ver4 tar ball includes c-code for the "new" SRT
 using:
        1] DAS-4020 PCI bus ADC card and in this case
 you need to install the driver PCI-DAS4020-12.1.21.tgz
@@ -17,12 +17,19 @@ Uncomment the gcc line which matches your available hardware
 Note that the libraries specified on this line need to be installed
 for the compilation to complete without errors. 
 
-This version has corrected a few problems like some overwitting of the display.
-Improvements have been made in the bandpass calibration wen using the TV dongle.
 The simplest version (last option in srtnmake script) which uses the TV dongle and
 a software FFT is recommended. Given the narrow bandwidth of the dongle compared with
 the PCI-DAS4020 the software FFT speed on most new PCs is quite satisfactory.  
 
+The version fixes a possible hanging of the rot2Prog controller. Fixes bswpwr
+readout in beamswitch mode. New features added are ability to use a stow position
+away from limits using keyword STOWPOS. Added record option which clears accumulation 
+record using RCLR. Selection of a time for simulation using
+START_DATE. Added keyword "vplot" to allow the generation of Postscript plot files 
+during the execution of a command file. Some general improvement to help display clarity.
+Many corrections and additions to the srt.hlp file.
+
+  Alan Rogers and Daniel Leonard  8 Sept 2014
 
 Added notes:
 
@@ -58,9 +65,13 @@ b) DAS-4020 copy over udev rules
 c) install the udev rules file rtl-sdr.rules 
   
 5] old Cassicorp antenna controller
+
 This new release does not support the old Cassicorp antenna controller but I have included
 the old code (sportold.c) which might be useful for anyone who wants to write code
 for this old controller.
  
-  aeer 26 Nov 2013
+6] The TV dongle is reommended
 
+If you use the TV dongle all the source code is in the tar ball and it is easy to use grep to
+find variables etc. in the code and *.h files, make changes or add a printf for debugging a problem and recompile.
+Please send any code corrections that may be or general use to Haystack for possible inclusion in the next release  

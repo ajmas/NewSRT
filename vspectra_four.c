@@ -48,7 +48,7 @@ void vspectra(void)
     d1.lofreq = 0;              // not used but needs to be set to zero to flag the use of the dongle 
     d1.efflofreq = d1.freq - d1.bw * 0.5;
 
-    num = d1.nblk;                    //was 20   // was 100
+    num = d1.nblk;              //was 20   // was 100
     nsam = NSAM;
     d1.nsam = NSAM * num;
     avsig = 0;
@@ -99,6 +99,13 @@ void vspectra(void)
         }
     }
 //   printf("max %f min %f\n",max,min);
+    if (d1.rms >= 0) {
+        d1.rms = 0;
+        for (i = 0; i < blsiz2; i++)
+            d1.rms += vspec[i];
+        if (d1.fftsim)
+            d1.rms = sqrt(d1.rms / ((double) (numm * 2.0 * blsiz2))); // 2 for re and am
+    }
     max = av = 0;
     maxi = 0;
     for (i = 0; i < blsiz2; i++)
@@ -150,8 +157,7 @@ void vspectra(void)
         }
     }
     d1.smax = smax;
-    if (!d1.radiosim)
-        free(bufferRead);
+    free(bufferRead);
 }
 
 // Initilizes and Opens the RTL Dongle

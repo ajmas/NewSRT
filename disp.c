@@ -16,8 +16,13 @@ void button_clear_clicked(void)
 
 void button_stow_clicked(void)
 {
-    d1.azcmd = d1.azlim1;
-    d1.elcmd = d1.ellim1;
+    if (d1.stowatlim) {
+        d1.azcmd = d1.azlim1;
+        d1.elcmd = d1.ellim1;
+    } else {
+        d1.azcmd = d1.stowaz;
+        d1.elcmd = d1.stowel;
+    }
     soutrack[0] = 0;
     d1.bsw = 0;
     d1.scan = 0;
@@ -98,6 +103,8 @@ void hit_enter_freq(void)
             d1.fc = (d1.f1 + d1.f2) * 0.5;
             if (d1.debug)
                 printf("new freq %f %d\n", d1.freq, d1.nfreq);
+            sprintf(d1.recnote, "* entered freq %f nfreq %d\n", d1.freq, d1.nfreq);
+            outfile(d1.recnote);
             d1.freqchng = 1;
             d1.calpwr = 0;
         }
@@ -131,6 +138,8 @@ void hit_enter_offset(void)
     str = gtk_entry_get_text(GTK_ENTRY(entry2));
     if (str != NULL)
         sscanf(str, "%*s %*s %lf %lf", &d1.azoff, &d1.eloff);
+    sprintf(d1.recnote, "* entered azoff %lf eloff %lf\n", d1.azoff, d1.eloff);
+    outfile(d1.recnote);
     d1.stopproc = 0;
     gtk_entry_set_text(GTK_ENTRY(entry2), "");
     gtk_widget_destroy(entry2);
@@ -419,6 +428,8 @@ gint button_press_event(GtkWidget * widget, GdkEventButton * event)
         if (d1.debug)
             printf("track %s i=%d\n", soutrack, imin);
         d1.track = 1;
+        if (!d1.noclearint)
+            d1.clearint = 1;
         if (d1.scan) {
             d1.scan = 0;
             d1.azoff = d1.eloff = 0.0;
@@ -456,7 +467,7 @@ void cleararea(void)
     gdk_draw_rectangle(pixmap,
                        drawing_area->style->white_gc, TRUE, 0, midy, drawing_area->allocation.width, midy);
     gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, midx, 0, midx, midy * 0.95);
-    gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, midx * 1.5, midy * 0.95,
+    gdk_draw_rectangle(pixmap, drawing_area->style->white_gc, TRUE, midx * 1.46, midy * 0.95,
                        midx * 0.5, midy * 0.05);
 }
 

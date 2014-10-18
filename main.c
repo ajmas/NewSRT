@@ -57,14 +57,13 @@ int main(int argc, char *argv[])
     GtkWidget *button_clear, *button_azel, *button_freq, *button_offset;
     GtkWidget *button_help;
     GdkColor color;
-    int i, ii, mode;
+    int i, ii;
     int yr, da, hr, mn, sc;
     double secstart;
     char buf[64];
     GdkGeometry geometry;
     GdkWindowHints geo_mask;
 //    GdkRectangle update_rect;
-    mode = 0;
     sprintf(d1.catnam, "srt.cat");
     sprintf(d1.hlpnam, "srt.hlp");
     for (i = 0; i < argc - 1; i++) {
@@ -73,16 +72,16 @@ int main(int argc, char *argv[])
             sscanf(argv[i + 1], "%63s", d1.catnam);
         if (strstr(buf, "-h") && strlen(buf) == 2)
             sscanf(argv[i + 1], "%63s", d1.hlpnam);
-        if (strstr(buf, "-m") && strlen(buf) == 2)
-            sscanf(argv[i + 1], "%d", &mode);
     }
 //    d1.azelport = 0x3f8;        // com1 default for old SRT 
+    d1.ver = 4;  // SRT software version
     d1.secs = readclock();
     d1.run = 1;
     d1.record = 0;
     d1.entry1 = d1.entry2 = d1.entry3 = d1.entry5 = d1.entry6 = d1.entry8 = d1.helpwindow = d1.vwindow = 0;
     d1.plot = 0;
     d1.start_time = 0.0;
+    d1.start_sec = 0.0;
     d1.speed_up = 0;
     d1.ppos = 0;
     d1.printout = 1;
@@ -95,6 +94,8 @@ int main(int argc, char *argv[])
     d1.freqcorr = 0;            // frequency correction for L.O. may be needed for TV dongle
     d1.freqchng = 0;
     d1.clearint = 0;
+    d1.record_clearint = 0;
+    d1.noclearint = 0;
     d1.nfreq = NSPEC;
     d1.plotsec = 1;
     d1.displ = 1;
@@ -112,6 +113,8 @@ int main(int argc, char *argv[])
 //    d1.rod5 = 30.0;             // pushrod counts per inch
     d1.azelsim = d1.radiosim = d1.fftsim = 0;
     d1.mainten = 0;
+    d1.stowatlim = 1;
+    d1.rms = -1;                // display max not rms 
     d1.calcons = 1.0;
     d1.caldone = 0;
     d1.nrfi = 0;
@@ -168,14 +171,24 @@ int main(int argc, char *argv[])
             return 0;
         }
     } else {
-        d1.azprev = d1.azlim1;
-        d1.elprev = d1.ellim1;
+        if (d1.stowatlim) {
+            d1.azprev = d1.azlim1;
+            d1.elprev = d1.ellim1;
+        } else {
+            d1.azprev = d1.stowaz;
+            d1.elprev = d1.stowel;
+        }
     }
     setgid(getgid());
     setuid(getuid());
     if (d1.mainten == 0) {
-        d1.azcmd = d1.azlim1;
-        d1.elcmd = d1.ellim1;
+        if (d1.stowatlim) {
+            d1.azcmd = d1.azlim1;
+            d1.elcmd = d1.ellim1;
+        } else {
+            d1.azcmd = d1.stowaz;
+            d1.elcmd = d1.stowel;
+        }
         d1.azcount = 0;
         d1.elcount = 0;
         d1.stow = 1;
@@ -257,7 +270,8 @@ int main(int argc, char *argv[])
         gtk_tooltips_set_tip(tooltips, button_azel, "click to enter az el coordinates", NULL);
         gtk_tooltips_set_tip(tooltips, button_npoint, "click to start npoint scan", NULL);
         gtk_tooltips_set_tip(tooltips, button_bsw, "click to start beam switch", NULL);
-        gtk_tooltips_set_tip(tooltips, button_freq, "click to enter new frequency [bw] [nfreq]", NULL);
+        gtk_tooltips_set_tip(tooltips, button_freq, "click to enter new frequency in MHz [bandwidth] [nfreq]",
+                             NULL);
         gtk_tooltips_set_tip(tooltips, button_offset, "click to enter offsets", NULL);
         if (!d1.cmdfl)
             gtk_tooltips_set_tip(tooltips, button_cmdfl, "click to start cmd file", NULL);
@@ -334,6 +348,10 @@ int main(int argc, char *argv[])
             d1.freqchng = 0;
         }
         if (d1.docal) {
+            if (d1.docal == 1) {
+                sprintf(d1.recnote, "* calibration started\n");
+                outfile(d1.recnote);
+            }
             if (d1.bsw) {
                 d1.bsw = 0;
                 d1.azoff = 0.0;
@@ -357,6 +375,8 @@ int main(int argc, char *argv[])
         if (d1.displ)
             cleararea();
         azel(d1.azcmd, d1.elcmd); // allow time after cal 
+        if (d1.comerr == -1)
+            return 0;
         if (!d1.slew) {
             pwr = 0.0;
         }
@@ -366,7 +386,9 @@ int main(int argc, char *argv[])
         aver();
         d1.integ2++;
         if (d1.record_int_sec && d1.integ2 >= d1.record_int_sec) {
-            outfile();
+            outfile(" ");
+            if (d1.record_clearint && d1.track && !d1.bsw && !d1.scan)
+                d1.clearint = 1;
             d1.integ2 = 0;
         }
         if (d1.displ) {
@@ -514,8 +536,9 @@ void aver(void)
     for (i = 0; i < d1.nfreq; i++)
         aavspec[i] = (d1.tsys + d1.tcal) * avspec[i] / (bspec[i] * d1.calpwr * d1.integ);
 //  printf("d1.calpwr %f %f\n",d1.calpwr, aavspec[(int)(0.4*d1.nfreq)]);
-    if (d1.scan != 0) {
+    if (d1.scan != 0 && d1.track) {
         scanpwr[d1.scan - 1] = pwr;
+//  printf("pwr %f scan %d\n",pwr,d1.scan);
     }
     if (d1.bsw && d1.track) {
 
@@ -535,11 +558,8 @@ void aver(void)
             for (i = 0; i < d1.nfreq; i++)
                 aavspec[i] =
                     d1.tsys * (avspecon[i] / d1.numon -
-                               avspecoff[i] / d1.numoff) / ((avspecon[i] + avspecoff[i]) / (d1.numon +
-                                                                                            d1.numoff));
-            d1.bswpwr =
-                d1.tsys * (d1.pwron / d1.numon -
-                           d1.pwroff / d1.numoff) / ((d1.pwron + d1.pwroff) / (d1.numon + d1.numoff));
+                               avspecoff[i] / d1.numoff) / (avspecoff[i] / d1.numoff);
+            d1.bswpwr = d1.tsys * (d1.pwron / d1.numon - d1.pwroff / d1.numoff) / (d1.pwroff / d1.numoff);
 // printf("j %d d1.azoff %f pwr %f\n",j,d1.azoff,pwr);
         }
         d1.bswint++;

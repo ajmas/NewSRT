@@ -27,6 +27,7 @@ GtkWidget *helpwindow;
 // display_help will open a new window for the help to be displayed
 void display_help()
 {
+    char txt[25];
     PangoFontDescription *font_desc;
     GtkWidget *vertbox, *buttonbox;
     GtkWidget *scrollbox;
@@ -46,7 +47,8 @@ void display_help()
     helpwindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     d1.helpwindow = 1;
     // set the title
-    gtk_window_set_title(GTK_WINDOW(helpwindow), "SRT Help");
+    sprintf(txt,"Help - SRTsoftware ver%d",d1.ver);
+    gtk_window_set_title(GTK_WINDOW(helpwindow), txt);
     // Set the geometry of the window
     geometry.min_width = 300;
     geometry.min_height = 300;

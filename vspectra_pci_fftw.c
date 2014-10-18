@@ -167,10 +167,16 @@ void vspectra(void)
                 size = get_pci(buffer1, nsam); // wait for transfer to complete
             else {
                 for (i = 0; i < nsam; i++)
-                    buffer1[i] = 2048 + 10.0 * gauss();
+                    buffer1[i] = 2048 + sqrt(av) * gauss();
                 size = nsam;
             }                   // simulate transfer
         sizep = size;
+    }
+    if (d1.rms >= 0) {
+        d1.rms = 0;
+        for (i = 0; i < blsiz2; i++)
+            d1.rms += vspec[i];
+        d1.rms = sqrt(d1.rms / ((double) (nsam * 2.0 * numm))); // 2 for re and am
     }
     av = max = 0;
     maxi = 0;

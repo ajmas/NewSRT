@@ -12,9 +12,10 @@ typedef struct
   double efflofreq;
   double vlsr;
   double start_time;
+  double start_sec;
   double av, avc, glat, glon, intg, restfreq, bw, delay, azoff, eloff, scnazoff, scneloff, calcons, beamw, smax, azcounts_per_deg,
     elcounts_per_deg, rod1,rod2,rod3,rod4,rod5, azlim1, azlim2, ellim1, ellim2, tsys, secs, tant,tload, tspill, aznow, elnow, azcmd, elcmd, 
-    pwroff, pwron, bswpwr, noisecal, avbsw, calpwr, yfac, f1, fc, f2, fbw, tcal, freqcorr, rfisigma, azprev, elprev;
+    pwroff, pwron, bswpwr, noisecal, avbsw, calpwr, yfac, f1, fc, f2, fbw, tcal, freqcorr, rfisigma, azprev, elprev, stowaz, stowel, rms;
   double rfi[25];
   double rfiwid[25];
   int speed_up;
@@ -30,16 +31,17 @@ typedef struct
   int nfreq;
   int record_int_sec;
   int record_spec;
+  int record_clearint;
   int record;
   int newday;
   int rday;
   int freqchng;
   int track;
   int nsecstart;
-  int secstop, clearint, fstatus, radiosim, azelsim, mainten, azcount, elcount, domap, xmark, map, mancal, south, ptoler, countperstep,
+  int secstop, clearint, noclearint, fstatus, radiosim, azelsim, mainten, azcount, elcount, domap, xmark, map, mancal, south, ptoler, countperstep,
     azelport, drift, scan, stow, slew, sourn, bsw, nbsw, bswint, calon, calmode, docal, caldone, rod, stopproc, comerr, limiterr, 
     cmdfl, cmdfline, year, nblk, nsam, unitid, run,wid,whgt,vwid,vwhgt,numon,numoff,psw,entry1,entry2,entry3,entry5,entry6,entry8,
-    helpwindow,vwindow,plot,obsn,nrfi,dongle,npoly;
+    helpwindow,vwindow,plot,obsn,nrfi,dongle,npoly,stowatlim,ver;
   int fftsim;
   unsigned int seed;
   int devices;
@@ -52,4 +54,5 @@ typedef struct
   char hlpnam[64];
   char statnam[32];
   char timsource[8];
+  char recnote[256];
 } d1type;

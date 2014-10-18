@@ -7,10 +7,10 @@
 #include "d1glob.h"
 
 
-void outfile(void)
+void outfile(char *txt)
 {
     int yr, da, hr, mn, sc, i, istart, istop;
-    float freqsep, sigma;
+    float freqsep, sigma, ppwr;
     GdkColor color;
     static FILE *file1 = NULL;
     static int n;
@@ -60,16 +60,25 @@ void outfile(void)
                    d1.filname, pwr);
         }
     }
+    if (txt[0] == '*') {
+        fprintf(file1, txt);
+        fclose(file1);
+        return;
+    }
     freqsep = d1.bw / d1.nfreq;
-    if (soutrack[0] > 0)
+    if (d1.caldone)
+        ppwr = d1.tant;
+    else
+        ppwr = pwr;
+    if (soutrack[0] > 0 || d1.stow != -1)
         fprintf(file1,
                 "DATE %4d:%03d:%02d:%02d:%02d obsn %3d az %3.0f el %2.0f freq_MHz %10.4f Tsys %6.3f Tant %6.3f vlsr %7.2f glat %6.3f glon %6.3f source %s\n",
-                yr, da, hr, mn, sc, d1.obsn, d1.aznow, d1.elnow, d1.freq, d1.tsys, d1.tant, d1.vlsr, d1.glat,
+                yr, da, hr, mn, sc, d1.obsn, d1.aznow, d1.elnow, d1.freq, d1.tsys, ppwr, d1.vlsr, d1.glat,
                 d1.glon, soutrack);
     else
         fprintf(file1,
                 "DATE %4d:%03d:%02d:%02d:%02d obsn %3d az %3.0f el %2.0f freq_MHz %10.4f Tsys %6.3f Tant %6.3f vlsr %7.2f glat %6.3f glon %6.3f source at_stow\n",
-                yr, da, hr, mn, sc, d1.obsn, d1.aznow, d1.elnow, d1.freq, d1.tsys, d1.tant, d1.vlsr, d1.glat,
+                yr, da, hr, mn, sc, d1.obsn, d1.aznow, d1.elnow, d1.freq, d1.tsys, ppwr, d1.vlsr, d1.glat,
                 d1.glon);
     if (d1.record_spec) {
         istart = d1.f1 * d1.nfreq + 0.5;
@@ -82,7 +91,7 @@ void outfile(void)
                 istart * d1.bw / d1.nfreq + d1.efflofreq, istop * d1.bw / d1.nfreq + d1.efflofreq, freqsep,
                 d1.bw, d1.fbw, d1.nfreq, d1.nsam, istop - istart, d1.integ * d1.nsam / (2.0e6 * d1.bw), sigma,
                 d1.bsw);
-        fprintf(file1, "Spectrum \n");
+        fprintf(file1, "Spectrum %6.0f integration periods\n", d1.integ);
         for (i = istart; i < istop; i++)
             fprintf(file1, "%8.3f ", aavspec[i]);
         fprintf(file1, "\n");

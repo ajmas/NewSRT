@@ -59,7 +59,7 @@ void vspectra(void)
         fft_init(blsiz2, &p0, &reamin0, &reamout0);
     }
 
-    num = d1.nblk;                    //was 20   // was 100
+    num = d1.nblk;              //was 20   // was 100
     nsam = NSAM;
     d1.nsam = NSAM * num;
     avsig = 0;
@@ -180,8 +180,7 @@ void vspectra(void)
     d1.smax = smax;
     if (!d1.fftsim)
         fft_free(&p0, &reamin0, &reamout0);
-    if (!d1.radiosim)
-        free(bufferRead);
+    free(bufferRead);
 }
 
 // Initilizes and Opens the RTL Dongle
