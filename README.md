@@ -75,8 +75,8 @@ Added notes:
     The following files library files may be required (and are included)
     if the ones on the PC are not compatible:
 
-    libacml.so
-    libgfortran.a
+     - libacml.so
+     - libgfortran.a
 
    3. Intel FFT
 
