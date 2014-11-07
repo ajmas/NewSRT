@@ -63,12 +63,13 @@ Added notes:
 
     Then edit ADC_BUFF_PHY_SIZE accordingly in a2dc.h, to set the DMA
     Buffer Size FOR EACH BOARD  and if a2dc.h is not edited
-
+`
     /* Note:  Edit these values for your particular system.  See README  */
     #define ADC_BUFF_PHY_SIZE   0x0200000  // Physical size of the ADCs buffer
     #define ADC_BUFF_PAGE_SIZE  0x0200000  /* must be a multiple of PAGE_SIZE and HALF_FIFO_SIZE and 
                                               greater than or equal to PAGE_SIZE.
                                               changed to 0x0200000 AEER
+`                                              
    2. AMD FFT
 
     The following files library files may be required (and are included)
